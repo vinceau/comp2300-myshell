@@ -1,0 +1,7 @@
+make file info
+http://www.cs.swarthmore.edu/~newhall/unixhelp/howto_makefiles.html
+
+fork, execv
+http://faq.cprogramming.com/cgi-bin/smartfaq.cgi?answer=1044654269&id=1043284392
+
+string seperation code taken from man strsep

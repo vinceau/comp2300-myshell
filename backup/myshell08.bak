@@ -1,0 +1,120 @@
+#define _BSD_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#define MAX_IN 80
+
+/* Given the argument vector my_args, look for an existing binary in the
+ * PATH environmental variable and if it exists, execute it with the
+ * arguments found in my_args. If run_in_bg is nonzero, it will not wait
+ * for it to return before continuing.
+ */
+void run_command(char *my_args[], int run_in_bg) {
+	switch (fork()) {
+		case -1:
+			// error occured when forking
+			printf("Failed to fork a child process.\n");
+			exit(EXIT_FAILURE);
+			break;
+		case 0:
+			// successfully forked child process
+			if (execvp(*my_args, my_args) < 0) {
+				printf("%s: command not found\n", *my_args);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		default:
+			// parent process
+			if (!run_in_bg) {
+				wait(NULL);
+			}
+			break;
+	}
+}
+
+/* Counts the occurance of a character in a string.
+ */
+int char_count(char string[], char c) {
+	int count = 0;
+	for (int i = 0; i < (int)strlen(string); i++) {
+		if (string[i] == c) {
+			count++;
+		}
+	}
+	return count;
+}
+
+
+int main(int argc, char *argv[]) {
+	char input[MAX_IN];
+
+	// the number of arguments in the input string
+	int arg_size;	
+
+	// flag to determine if process should be run in background
+	int bg;
+
+	// flag to determine if loop should continue
+	int quit = 0;
+
+	while (!quit) {
+		printf("%s: %s$ ", argv[0], getenv("USER"));	
+		
+		// quit if EOF was reached
+		if (fgets(input, MAX_IN, stdin) == NULL) {
+			printf("\n");	
+			quit = 1;
+			continue;
+		}
+		
+		// remove trailing new line
+		if (input[strlen(input) - 1] == '\n') {
+			input[strlen(input) - 1] = 0;
+		}
+
+		arg_size = char_count(input, ' ') + 1;
+		bg = 0;
+	
+		// restart if no command was inputted
+		if (strlen(input) < 1) {
+			continue;
+		}
+
+		// quit if exit was typed	
+		if (!strcmp(input, "exit")) {
+			quit = 1;
+			continue;
+		}
+
+		// split input into an argument vector by space
+		// code based on man strsep
+		char **ap, *arg_vector[arg_size + 1], *input_string;
+		input_string = input;
+		for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+			if (**ap != '\0') {
+				if (++ap >= &arg_vector[arg_size + 1]) {
+					break;
+				}
+			}
+		}
+
+		// if the last argument is "&" then run the command
+		// in the background
+		if (!strcmp(arg_vector[arg_size - 1], "&")) {
+			printf("\n");
+			arg_vector[arg_size - 1] = NULL;
+			arg_size--;
+			bg = 1;
+		}
+
+		// find and execute command
+		run_command(arg_vector, bg);
+	}
+	return 0;
+}
+

@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define BIN_DIR "/usr/bin/"
+#define MAX_IN 80
+
+int file_exists(char name[]) {
+	if (access(name, F_OK) != -1) {
+		return 1;
+	}
+	return 0;
+}
+
+/* This checks the 3 possible directories for the binary
+ * and modifies the location of the binary if found.
+ * It first checks the current directory, then /bin/,
+ * then /user/bin/.
+ */
+int check_bin(char name[], char loc[], int buf) {
+	char *pre[] = {"", "/bin/", BIN_DIR};
+	
+	for (int i = 0; i < 3; i++) {
+		strlcpy(loc, pre[i], buf);
+		strlcat(loc, name, buf);
+		if (file_exists(loc)) {
+			return 1;
+		} 
+	}
+	return 0;
+}
+
+/* Execute the binary located at c using the 
+ * arguments found in my_args.
+ */
+void run_command(char *c, char *my_args[]) {
+	//printf("Running command: %s\n", c);
+	
+	pid_t pid;
+
+	switch (pid = fork()) {
+		case -1:
+			printf("Fork failed\n");
+			break;
+		case 0:
+			// child	
+			execv(c, my_args);
+			printf("Failed to execute %s \n", c);
+			exit(EXIT_FAILURE);
+			break;
+		default:
+			// parent
+			wait(NULL);	
+			break;
+	}
+}
+
+/* Counts the occurance of a character in a string.
+ */
+int char_count(char string[], char c) {
+	int count = 0;
+	for (int i = 0; i < strlen(string); i++) {
+		if (string[i] == c) {
+			count++;
+		}
+	}
+	return count;
+}
+
+
+int main(int argc, char *argv[]) {
+	char input[MAX_IN];	
+	int quit = 0;
+
+	while (!quit) {
+		printf(">> ");
+		fgets(input, MAX_IN, stdin);
+		input[strlen(input) - 1] = 0; // remove trailing new line
+
+		// quit if exit was typed	
+		if (!strcmp(input, "exit")) {
+			quit = 1;
+			continue;
+		}
+
+		int arg_size = char_count(input, ' ') + 2;		
+
+		// split input into an argument vector by space
+		char **ap, *arg_vector[arg_size], *input_string;
+		input_string = input;
+		for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+			if (**ap != '\0') {
+				if (++ap >= &arg_vector[arg_size]) {
+					break;
+				}
+			}
+		}
+
+		// determine the max size needed to store the location
+		// i.e. binary name + /usr/bin/
+		int count = strlen(arg_vector[0]) + strlen(BIN_DIR) + 1;
+		
+		// create a string that will contain the full location
+		// of the binary
+		char location[count];
+	
+		if (check_bin(arg_vector[0], location, count)) {
+			run_command(location, arg_vector);
+		} else {
+			printf("Invalid command.\n");
+			quit = 1;
+		}
+	}
+	return 0;
+}
+

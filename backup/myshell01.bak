@@ -1,0 +1,88 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define DIR "/usr/bin/"
+
+int file_exists(char name[]) {
+	if (access(name, F_OK) != -1) {
+		return 1;
+	}
+	return 0;
+}
+
+/* This checks the 3 possible directories for the binary
+ * and modifies the location of the binary if found.
+ * It first checks the current directory, then /bin/,
+ * then /user/bin/.
+ */
+int check_bin(char name[], char loc[], int buf) {
+	char *pre[] = {"", "/bin/", DIR};
+	
+	for (int i = 0; i < 3; i++) {
+		strlcpy(loc, pre[i], buf);
+		strlcat(loc, name, buf);
+		if (file_exists(loc)) {
+			return 1;
+		} 
+	}
+	return 0;
+}
+
+
+void run_command(char *c) {
+	//printf("Running command: %s\n", c);
+	
+	pid_t pid;
+	char *my_args[3];
+	my_args[0] = c;
+	my_args[1] = NULL;
+
+	switch (pid = fork()) {
+		case -1:
+			printf("Fork failed\n");
+			break;
+		case 0:
+			// child	
+			execv(c, my_args);
+			printf("Failed to execute %s \n", c);
+			exit(EXIT_FAILURE);
+			break;
+		default:
+			// parent
+			wait(NULL);	
+			break;
+	}
+}
+
+int main(int argc, char *argv[]) {
+	int loop = 1;
+
+	while (loop) {
+		char input[] = "";	
+		printf(">> ");
+		scanf("%s", input);
+		
+		// quit if exit was typed	
+		if (!strcmp(input, "exit")) {
+			loop = 0;
+			continue;
+		}
+		
+		// determine the max size needed to store the location
+		// i.e. binary name + /usr/bin/
+		int count = strlen(input) + strlen(DIR) + 1;
+		char location[count];
+	
+		if (check_bin(input, location, count)) {
+			run_command(location);
+		} else {
+			printf("Invalid command.\n");
+			loop = 1;
+		}
+	}
+	return 0;
+}
+

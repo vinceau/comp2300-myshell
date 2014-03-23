@@ -1,0 +1,152 @@
+#define _BSD_SOURCE
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#define BIN_DIR "/usr/bin/"
+#define MAX_IN 80
+
+int file_exists(char name[]) {
+	if (access(name, F_OK) != -1) {
+		return 1;
+	}
+	return 0;
+}
+
+/* Checks the current directory, then /bin/, then /usr/bin/
+ * for the binary bin_name and if found, saves it to location.
+ */
+int check_bin(char bin_name[], char location[]) {
+	char *pre[] = {"", "/bin/", BIN_DIR};
+	
+	for (int i = 0; i < 3; i++) {
+		strncpy(location, pre[i], strlen(pre[i]) + 1);
+		strncat(location, bin_name, strlen(bin_name) + 1);
+		if (file_exists(location)) {
+			return 1;
+		} 
+	}
+	return 0;
+}
+
+/* Given the argument vector my_args, look for an existing binary
+ * and if it exists, execute it with the arguments found in my_args.
+ * If run_in_bg is nonzero, it will not wait for it to return
+ * before continuing.
+ */
+void run_command(char *my_args[], int run_in_bg) {
+	// determine the max size needed to store the location
+	// i.e. binary name + /usr/bin/
+	int count = strlen(my_args[0]) + strlen(BIN_DIR) + 1;
+	
+	// create a string that will contain the full location
+	// of the binary
+	char location[count];
+
+	// return if binary cannot be found
+	if (!check_bin(my_args[0], location)) {
+		printf("%s: command not found\n", my_args[0]);
+		return;	
+	}
+
+	//printf("Running command: %s\n", location);
+	
+	switch (fork()) {
+		case -1:
+			fprintf(stderr, "Failed to fork\n");
+			break;
+		case 0:
+			// child process
+			execv(location, my_args);
+			fprintf(stderr, "Failed to execute %s \n", location);
+			exit(EXIT_FAILURE);
+			break;
+		default:
+			// parent process
+			if (!run_in_bg) {
+				wait(NULL);
+			}
+			break;
+	}
+}
+
+/* Counts the occurance of a character in a string.
+ */
+int char_count(char string[], char c) {
+	int count = 0;
+	for (int i = 0; i < (int)strlen(string); i++) {
+		if (string[i] == c) {
+			count++;
+		}
+	}
+	return count;
+}
+
+
+int main() {
+	char input[MAX_IN];	
+
+	// the number of arguments in the input string
+	int arg_size;	
+
+	// flag to determine if process should be run in background
+	int bg;
+
+	// flag to determine if loop should continue
+	int quit = 0;
+
+	while (!quit) {
+		printf(">> ");
+
+		// quit if EOF was reached
+		if (fgets(input, MAX_IN, stdin) == NULL) {
+			printf("\n");	
+			quit = 1;
+			continue;
+		}
+
+		input[strlen(input) - 1] = 0; // remove trailing new line
+		arg_size = char_count(input, ' ') + 1;
+		bg = 0;
+	
+		// restart if no command was inputted
+		if (strlen(input) < 1) {
+			continue;
+		}
+
+		// quit if exit was typed	
+		if (!strcmp(input, "exit")) {
+			quit = 1;
+			continue;
+		}
+
+		// split input into an argument vector by space
+		// code based on man strsep
+		char **ap, *arg_vector[arg_size + 1], *input_string;
+		input_string = input;
+		for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+			if (**ap != '\0') {
+				if (++ap >= &arg_vector[arg_size + 1]) {
+					break;
+				}
+			}
+		}
+
+		// if the last argument is "&" then run the command
+		// in the background
+		if (!strcmp(arg_vector[arg_size - 1], "&")) {
+			arg_vector[arg_size - 1] = NULL;
+			arg_size--;
+			bg = 1;
+		}
+
+		// find and execute command if it exists
+		run_command(arg_vector, bg);
+	}
+	return 0;
+}
+
