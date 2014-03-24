@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
         bg = 0;
     
         char *prompt;
-        asprintf(&prompt, "%s: %s$ ", argv[0], getwd(NULL));
+        asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
         input = readline(prompt);
 
         if (input == NULL) {
