@@ -64,47 +64,47 @@ int main(int argc, char *argv[]) {
         bg = 0;
         input = readline(prompt);
 
-		if (input == NULL) {
-			printf("\n");
+        if (input == NULL) {
+            printf("\n");
             quit = 1;
-		}
+        }
 
-		else if (strlen(input) > 0) {
-			if (!strcmp(input, "exit")) {
-				quit = 1;
-				break;
-			}
+        else if (strlen(input) > 0) {
+            if (!strcmp(input, "exit")) {
+                quit = 1;
+                break;
+            }
 
-			add_history(input);
-			arg_size = char_count(input, ' ') + 1;
+            add_history(input);
+            arg_size = char_count(input, ' ') + 1;
 
-			// split input into an argument vector by space
-			// code based on the bsd man strsep
-			char **ap, *arg_vector[arg_size + 1], *input_string;
-			input_string = input;
-			for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
-				if (**ap != '\0') {
-					if (++ap >= &arg_vector[arg_size + 1]) {
-						break;
-					}
-				}
-			}
+            // split input into an argument vector by space
+            // code based on the bsd man strsep
+            char **ap, *arg_vector[arg_size + 1], *input_string;
+            input_string = input;
+            for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+                if (**ap != '\0') {
+                    if (++ap >= &arg_vector[arg_size + 1]) {
+                        break;
+                    }
+                }
+            }
 
-			if (!strcmp(arg_vector[arg_size - 1], "&")) {
+            if (!strcmp(arg_vector[arg_size - 1], "&")) {
                 // run command in background
-				printf("\n");
-				arg_vector[arg_size - 1] = NULL;
-				arg_size--;
-				bg = 1;
-			}
+                printf("\n");
+                arg_vector[arg_size - 1] = NULL;
+                arg_size--;
+                bg = 1;
+            }
 
-			run_command(arg_vector, bg);
+            run_command(arg_vector, bg);
 
-		}
- 
+        }
+
         free(input);
     }
-    
+
     free(prompt);
     return 0;
 }
