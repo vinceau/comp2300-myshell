@@ -5,4 +5,7 @@ fork, execv
 http://faq.cprogramming.com/cgi-bin/smartfaq.cgi?answer=1044654269&id=1043284392
 http://www.csl.mtu.edu/cs4411.ck/www/NOTES/process/fork/exec.html
 
+get index of a character in a string
+http://stackoverflow.com/questions/3217629/in-c-how-do-i-find-the-index-of-a-character-within-a-string
+
 string seperation code taken from man strsep

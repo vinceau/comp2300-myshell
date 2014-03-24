@@ -11,14 +11,6 @@
 
 #define MAX_IN 80
 
-/* Save current directory to old then change directory to path.
- */
-int change_dir(char *path, char **old) {
-    char *temp = *old;
-    *old = getcwd(NULL, 0);
-    return chdir((!strcmp(path, "-")) ? temp : path); 
-} 
-
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
  * arguments found in my_args. If run_in_bg is nonzero, it will not wait
@@ -61,7 +53,7 @@ int char_count(char string[], char c) {
 
 /* Removes trailing spaces of a string.
  */
-void remove_spaces(char *string) {
+void eat_spaces(char *string) {
     for (int i = (int) strlen(string) - 1; i > 0; i--) {
         if (string[i] == ' ') {
             string[i] = 0;
@@ -90,16 +82,21 @@ void parse_input(char **in) {
     *in = newstring;
 }
 
+/* Save current directory to old then change directory to path.
+ */
+int change_dir(char *path, char **old) {
+    char *temp = *old;
+    *old = getcwd(NULL, 0);
+    return chdir((!strcmp(path, "-")) ? temp : path); 
+} 
+
 int main(int argc, char *argv[]) {
-    char *input, *old_dir;
-    int arg_size;
-    int bg;
-    int quit = 0;
+    char *prompt, *input, *old_dir;
+    int arg_size, bg, quit = 0;
 
     while(!quit) {
         bg = 0;
     
-        char *prompt;
         asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
         input = readline(prompt);
 
@@ -115,7 +112,7 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
-            remove_spaces(input);
+            eat_spaces(input);
             arg_size = char_count(input, ' ') + 1;
             
             char **ap, *arg_vector[arg_size + 1], *input_string;
