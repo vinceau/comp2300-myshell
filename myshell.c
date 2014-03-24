@@ -1,13 +1,13 @@
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 
 #define MAX_IN 80
 
@@ -51,15 +51,44 @@ int char_count(char string[], char c) {
     return count;
 }
 
+/* Removes trailing spaces of a string.
+ */
+void remove_spaces(char *string) {
+    for (int i = (int) strlen(string) - 1; i > 0; i--) {
+        if (string[i] == ' ') {
+            string[i] = 0;
+        } else {
+            return;
+        }
+    }
+}
+
+void parse_input(char **in) {
+    char *input = *in;
+    // get the address of the first ~ character
+    char* tilde = strchr(input, '~');
+    if (tilde == NULL) {
+        return;
+    }
+    // find index of the ~ in the string
+    int index = tilde - input;
+    // find the length of the remaining characters
+    int rest = (int)strlen(input) - index - 1;
+    char *newstring;
+    asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest, input + index + 1);
+    parse_input(&newstring); 
+    *in = newstring;
+}
+
 int main(int argc, char *argv[]) {
     char *input;
-    int arg_size;   
+    int arg_size;
     int bg;
     int quit = 0;
 
     char *prompt;
-    asprintf(&prompt, "%s: %s$ ", argv[0], getenv("USER"));     
- 
+    asprintf(&prompt, "%s: %s$ ", argv[0], getenv("USER"));
+
     while(!quit) {
         bg = 0;
         input = readline(prompt);
@@ -76,12 +105,15 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
+            remove_spaces(input);
             arg_size = char_count(input, ' ') + 1;
+            
+            char **ap, *arg_vector[arg_size + 1], *input_string;
+            input_string = input;
+            parse_input(&input_string);
 
             // split input into an argument vector by space
             // code based on the bsd man strsep
-            char **ap, *arg_vector[arg_size + 1], *input_string;
-            input_string = input;
             for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
                 if (**ap != '\0') {
                     if (++ap >= &arg_vector[arg_size + 1]) {
@@ -90,6 +122,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+            printf("%d\n", arg_size);
             if (!strcmp(arg_vector[arg_size - 1], "&")) {
                 // run command in background
                 printf("\n");
@@ -100,6 +133,7 @@ int main(int argc, char *argv[]) {
 
             run_command(arg_vector, bg);
 
+            free(input_string);
         }
 
         free(input);
