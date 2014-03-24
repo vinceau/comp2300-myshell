@@ -16,7 +16,16 @@
  * arguments found in my_args. If run_in_bg is nonzero, it will not wait
  * for it to return before continuing.
  */
-void run_command(char *my_args[], int run_in_bg) {
+void run_command(int arg_size, char *my_args[], int run_in_bg) {
+    // manually handle change directory 
+    if (!strcmp(my_args[0], "cd")) {
+        char *path = (arg_size == 1) ? getenv("HOME") : my_args[1]; 
+        if (chdir(path)) {
+            printf("No such file or directory.\n");
+        }
+        return;
+    }
+    
     switch (fork()) {
         case -1:
             // error occured when forking
@@ -63,6 +72,8 @@ void remove_spaces(char *string) {
     }
 }
 
+/* Replaces all the tildes in a string with the home environmental variable.
+ */
 void parse_input(char **in) {
     char *input = *in;
     // get the address of the first ~ character
@@ -86,11 +97,11 @@ int main(int argc, char *argv[]) {
     int bg;
     int quit = 0;
 
-    char *prompt;
-    asprintf(&prompt, "%s: %s$ ", argv[0], getenv("USER"));
-
     while(!quit) {
         bg = 0;
+    
+        char *prompt;
+        asprintf(&prompt, "%s: %s$ ", argv[0], getwd(NULL));
         input = readline(prompt);
 
         if (input == NULL) {
@@ -122,7 +133,6 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            printf("%d\n", arg_size);
             if (!strcmp(arg_vector[arg_size - 1], "&")) {
                 // run command in background
                 printf("\n");
@@ -131,14 +141,14 @@ int main(int argc, char *argv[]) {
                 bg = 1;
             }
 
-            run_command(arg_vector, bg);
+            run_command(arg_size, arg_vector, bg);
 
             free(input_string);
         }
 
+        free(prompt);
         free(input);
     }
 
-    free(prompt);
     return 0;
 }
