@@ -9,8 +9,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define MAX_IN 80
-
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
  * arguments found in my_args. If run_in_bg is nonzero, it will not wait
@@ -90,17 +88,26 @@ void eat_spaces(char string[]) {
     }
 }
 
+/* Returns the first index of a character in a string.
+ * If character can't be found, it returns -1.
+ */
+int index_of(char input[], char c) {
+    char* address = strchr(input, c);
+    if (address == NULL) {
+        return -1;
+    }
+    return address - input;
+}
+
 /* Replaces all the tildes in a string with the home environmental variable.
  */
 void parse_input(char **in) {
     char *input = *in;
-    // get the address of the first ~ character
-    char* tilde = strchr(input, '~');
-    if (tilde == NULL) {
+    // find index of the ~ in the string
+    int index = index_of(input, '~');
+    if (index < 0) {
         return;
     }
-    // find index of the ~ in the string
-    int index = tilde - input;
     // find the length of the remaining characters
     int rest = (int)strlen(input) - index - 1;
     char *newstring;
@@ -109,12 +116,13 @@ void parse_input(char **in) {
     *in = newstring;
 }
 
-/* Save current directory to old then change directory to path.
+/* Save current directory to old then changes the current
+ * directory to path.
  */
 int change_dir(char *path, char **old) {
     char *temp = *old;
     *old = getcwd(NULL, 0);
-    return chdir((!strcmp(path, "-")) ? temp : path); 
+    return chdir((!strcmp(path, "-")) ? temp : path);
 } 
 
 int main(int argc, char *argv[]) {
@@ -147,18 +155,9 @@ int main(int argc, char *argv[]) {
             input_string = input;
             parse_input(&input_string);
 
-            //int dquote = 0;
-            //int squote = 0;
             // split input into an argument vector by space
             // code based on the bsd man strsep
             for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
-                //printf("%s\n", *ap); 
-                //if (**ap == '\"') {
-                //    dquote = (dquote) ? 0 : 1; 
-                //}
-                //if (**ap == '\'') {
-                //    dquote = (squote) ? 0 : 1; 
-                //}
                 if (**ap != '\0') {
                     if (++ap >= &arg_vector[arg_size + 1]) {
                         break;
