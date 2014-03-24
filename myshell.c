@@ -11,21 +11,20 @@
 
 #define MAX_IN 80
 
+/* Save current directory to old then change directory to path.
+ */
+int change_dir(char *path, char **old) {
+    char *temp = *old;
+    *old = getcwd(NULL, 0);
+    return chdir((!strcmp(path, "-")) ? temp : path); 
+} 
+
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
  * arguments found in my_args. If run_in_bg is nonzero, it will not wait
  * for it to return before continuing.
  */
-void run_command(int arg_size, char *my_args[], int run_in_bg) {
-    // manually handle change directory 
-    if (!strcmp(my_args[0], "cd")) {
-        char *path = (arg_size == 1) ? getenv("HOME") : my_args[1]; 
-        if (chdir(path)) {
-            printf("No such file or directory.\n");
-        }
-        return;
-    }
-    
+void run_command(char *my_args[], int run_in_bg) {
     switch (fork()) {
         case -1:
             // error occured when forking
@@ -87,12 +86,12 @@ void parse_input(char **in) {
     int rest = (int)strlen(input) - index - 1;
     char *newstring;
     asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest, input + index + 1);
-    parse_input(&newstring); 
+    parse_input(&newstring); // replace the rest of the tildes 
     *in = newstring;
 }
 
 int main(int argc, char *argv[]) {
-    char *input;
+    char *input, *old_dir;
     int arg_size;
     int bg;
     int quit = 0;
@@ -141,8 +140,15 @@ int main(int argc, char *argv[]) {
                 bg = 1;
             }
 
-            run_command(arg_size, arg_vector, bg);
-
+            // manually handle change directory 
+            if (!strcmp(arg_vector[0], "cd")) {
+                char *path = (arg_size == 1) ? getenv("HOME") : arg_vector[1]; 
+                if (change_dir(path, &old_dir)) {
+                    printf("No such file or directory.\n");
+                }
+            } else {
+                run_command(arg_vector, bg);
+            }
             free(input_string);
         }
 
