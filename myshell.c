@@ -39,21 +39,48 @@ void run_command(char *my_args[], int run_in_bg) {
     }
 }
 
-/* Counts the occurance of a character in a string.
+/* Counts the number of arguments in an argument string.
+ * Ensures correct handling of quotes and spaces.
  */
-int char_count(char string[], char c) {
-    int count = 0;
+int arg_count(char string[]) {
+    int dquote = 0; // flag for waiting double quote
+    int squote = 0; // flag for waiting single quote
+    int count = 1;
     for (int i = 0; i < (int)strlen(string); i++) {
-        if (string[i] == c) {
-            count++;
+        char c = string[i]; 
+        if (c == '\"') {
+            dquote = (dquote) ? 0 : 1; 
+        }
+        if (c == '\'') {
+            squote = (squote) ? 0 : 1; 
+        }
+        if (c == ' ' && !dquote && !squote) {
+            // don't count repeated spaces
+            if (i > 0 && string[i - 1] != ' ') {
+                count++;
+            }
         }
     }
     return count;
 }
 
-/* Removes trailing spaces of a string.
+/* Shifts all the characters of the string to the left by one.
+ * Useful for removing leading white space.
  */
-void eat_spaces(char *string) {
+void shift_string(char string[]) {
+    int len = (int)strlen(string) - 1; 
+    for (int i = 0; i < len; i++) {
+        string[i] = string[i + 1];
+    }
+    string[len] = 0;
+}
+
+/* Removes leading and trailing spaces of a string.
+ */
+void eat_spaces(char string[]) {
+    while (string[0] == ' ') {
+        shift_string(string);
+    }
     for (int i = (int) strlen(string) - 1; i > 0; i--) {
         if (string[i] == ' ') {
             string[i] = 0;
@@ -113,15 +140,25 @@ int main(int argc, char *argv[]) {
 
             add_history(input);
             eat_spaces(input);
-            arg_size = char_count(input, ' ') + 1;
-            
+            arg_size = arg_count(input);
+            printf("arg size: %d\n", arg_size); 
+
             char **ap, *arg_vector[arg_size + 1], *input_string;
             input_string = input;
             parse_input(&input_string);
 
+            //int dquote = 0;
+            //int squote = 0;
             // split input into an argument vector by space
             // code based on the bsd man strsep
             for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+                //printf("%s\n", *ap); 
+                //if (**ap == '\"') {
+                //    dquote = (dquote) ? 0 : 1; 
+                //}
+                //if (**ap == '\'') {
+                //    dquote = (squote) ? 0 : 1; 
+                //}
                 if (**ap != '\0') {
                     if (++ap >= &arg_vector[arg_size + 1]) {
                         break;
