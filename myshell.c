@@ -17,48 +17,48 @@
  * for it to return before continuing.
  */
 void run_command(char *my_args[], int run_in_bg) {
-	switch (fork()) {
-		case -1:
-			// error occured when forking
-			printf("Failed to fork a child process.\n");
-			exit(EXIT_FAILURE);
-			break;
-		case 0:
-			// successfully forked child process
-			if (execvp(*my_args, my_args) < 0) {
-				printf("%s: command not found\n", *my_args);
-				exit(EXIT_FAILURE);
-			}
-			break;
-		default:
-			// parent process
-			if (!run_in_bg) {
-				wait(NULL);
-			}
-			break;
-	}
+    switch (fork()) {
+        case -1:
+            // error occured when forking
+            printf("Failed to fork a child process.\n");
+            exit(EXIT_FAILURE);
+            break;
+        case 0:
+            // successfully forked child process
+            if (execvp(*my_args, my_args) < 0) {
+                printf("%s: command not found\n", *my_args);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        default:
+            // parent process
+            if (!run_in_bg) {
+                wait(NULL);
+            }
+            break;
+    }
 }
 
 /* Counts the occurance of a character in a string.
  */
 int char_count(char string[], char c) {
-	int count = 0;
-	for (int i = 0; i < (int)strlen(string); i++) {
-		if (string[i] == c) {
-			count++;
-		}
-	}
-	return count;
+    int count = 0;
+    for (int i = 0; i < (int)strlen(string); i++) {
+        if (string[i] == c) {
+            count++;
+        }
+    }
+    return count;
 }
 
 int main(int argc, char *argv[]) {
     char *input;
-	int arg_size;	
-	int bg;
-	int quit = 0;
+    int arg_size;   
+    int bg;
+    int quit = 0;
 
-	char *prompt;
-	asprintf(&prompt, "%s: %s$ ", argv[0], getenv("USER"));		
+    char *prompt;
+    asprintf(&prompt, "%s: %s$ ", argv[0], getenv("USER"));     
  
     while(!quit) {
         bg = 0;
