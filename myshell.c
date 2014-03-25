@@ -14,7 +14,17 @@
  * arguments found in my_args. If run_in_bg is nonzero, it will not wait
  * for it to return before continuing.
  */
-void run_command(char *my_args[], int run_in_bg) {
+void run_command(int arg_size, char *my_args[]) {
+    int bg = 0;
+
+    if (!strcmp(my_args[arg_size - 1], "&")) {
+        // run command in background
+        printf("\n");
+        my_args[arg_size - 1] = NULL;
+        arg_size--;
+        bg = 1;
+    }
+
     switch (fork()) {
         case -1:
             // error occured when forking
@@ -30,7 +40,7 @@ void run_command(char *my_args[], int run_in_bg) {
             break;
         default:
             // parent process
-            if (!run_in_bg) {
+            if (!bg) {
                 wait(NULL);
             }
             break;
@@ -127,11 +137,9 @@ int change_dir(char *path, char **old) {
 
 int main(int argc, char *argv[]) {
     char *prompt, *input, *old_dir;
-    int arg_size, bg, quit = 0;
+    int arg_size, quit = 0;
 
     while(!quit) {
-        bg = 0;
-    
         asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
         input = readline(prompt);
 
@@ -149,7 +157,6 @@ int main(int argc, char *argv[]) {
             add_history(input);
             eat_spaces(input);
             arg_size = arg_count(input);
-            printf("arg size: %d\n", arg_size); 
 
             char **ap, *arg_vector[arg_size + 1], *input_string;
             input_string = input;
@@ -165,14 +172,6 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if (!strcmp(arg_vector[arg_size - 1], "&")) {
-                // run command in background
-                printf("\n");
-                arg_vector[arg_size - 1] = NULL;
-                arg_size--;
-                bg = 1;
-            }
-
             // manually handle change directory 
             if (!strcmp(arg_vector[0], "cd")) {
                 char *path = (arg_size == 1) ? getenv("HOME") : arg_vector[1]; 
@@ -180,7 +179,7 @@ int main(int argc, char *argv[]) {
                     printf("No such file or directory.\n");
                 }
             } else {
-                run_command(arg_vector, bg);
+                run_command(arg_size, arg_vector);
             }
             free(input_string);
         }
