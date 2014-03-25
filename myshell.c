@@ -11,7 +11,7 @@
 
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
- * arguments found in my_args. If run_in_bg is nonzero, it will not wait
+ * arguments found in my_args. If list argument is &, it will not wait
  * for it to return before continuing.
  */
 void run_command(int arg_size, char *my_args[]) {
@@ -23,6 +23,14 @@ void run_command(int arg_size, char *my_args[]) {
         my_args[arg_size - 1] = NULL;
         arg_size--;
         bg = 1;
+    }
+
+    for (int i = 0; i < arg_size; i++) {
+        if (!strcmp(my_args[i], ">") && i + 1 < arg_size) {
+            freopen(my_args[i + 1], "w+", stdout);
+            my_args[i] = NULL;
+            break;
+        }
     }
 
     switch (fork()) {
@@ -135,6 +143,25 @@ int change_dir(char *path, char **old) {
     return chdir((!strcmp(path, "-")) ? temp : path);
 } 
 
+/* Given an input string, creates a space seperated argument vector.
+ */
+void make_vector(char *input, char *arg_vector[], int arg_size) {
+    char **ap, *input_string;
+    input_string = input;
+    parse_input(&input_string);
+
+    // split input into an argument vector by space
+    // code based on the bsd man strsep
+    for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
+        if (**ap != '\0') {
+            if (++ap >= &arg_vector[arg_size + 1]) {
+                break;
+            }
+        }
+    }
+    free(input_string);
+}
+
 int main(int argc, char *argv[]) {
     char *prompt, *input, *old_dir;
     int arg_size, quit = 0;
@@ -157,20 +184,8 @@ int main(int argc, char *argv[]) {
             add_history(input);
             eat_spaces(input);
             arg_size = arg_count(input);
-
-            char **ap, *arg_vector[arg_size + 1], *input_string;
-            input_string = input;
-            parse_input(&input_string);
-
-            // split input into an argument vector by space
-            // code based on the bsd man strsep
-            for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
-                if (**ap != '\0') {
-                    if (++ap >= &arg_vector[arg_size + 1]) {
-                        break;
-                    }
-                }
-            }
+            char *arg_vector[arg_size + 1];
+            make_vector(input, arg_vector, arg_size);
 
             // manually handle change directory 
             if (!strcmp(arg_vector[0], "cd")) {
@@ -181,7 +196,6 @@ int main(int argc, char *argv[]) {
             } else {
                 run_command(arg_size, arg_vector);
             }
-            free(input_string);
         }
 
         free(prompt);
