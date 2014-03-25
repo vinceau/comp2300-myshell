@@ -25,8 +25,12 @@ void run_command(int arg_size, char *my_args[]) {
         arg_size--;
         bg = 1;
     }
+<<<<<<< HEAD
 
     int fd = 0;
+=======
+/*
+>>>>>>> 2febf9c0ad725150021e06d535e6aa9ca9c51142
     for (int i = 0; i < arg_size; i++) {
         if (!strcmp(my_args[i], ">") && i + 1 < arg_size) {
             fd = open(my_args[i + 1], O_RDWR | O_CREAT | O_APPEND, 0644);
@@ -34,10 +38,14 @@ void run_command(int arg_size, char *my_args[]) {
             break;
         }
     }
+<<<<<<< HEAD
 
     int fds[3];
     pipe(fds);
 
+=======
+*/
+>>>>>>> 2febf9c0ad725150021e06d535e6aa9ca9c51142
     switch (fork()) {
         case -1:
             // error occured when forking
