@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
@@ -25,13 +26,17 @@ void run_command(int arg_size, char *my_args[]) {
         bg = 1;
     }
 
+    int fd = 0;
     for (int i = 0; i < arg_size; i++) {
         if (!strcmp(my_args[i], ">") && i + 1 < arg_size) {
-            freopen(my_args[i + 1], "w+", stdout);
+            fd = open(my_args[i + 1], O_RDWR | O_CREAT | O_APPEND, 0644);
             my_args[i] = NULL;
             break;
         }
     }
+
+    int fds[3];
+    pipe(fds);
 
     switch (fork()) {
         case -1:
@@ -40,6 +45,10 @@ void run_command(int arg_size, char *my_args[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
+            if (fd) {
+                dup2(fd, fileno(stdout));
+                close(fd);
+            }
             // successfully forked child process
             if (execvp(*my_args, my_args) < 0) {
                 printf("%s: command not found\n", *my_args);
