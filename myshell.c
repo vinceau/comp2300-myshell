@@ -24,7 +24,7 @@ void run_command(int arg_size, char *my_args[]) {
         arg_size--;
         bg = 1;
     }
-
+/*
     for (int i = 0; i < arg_size; i++) {
         if (!strcmp(my_args[i], ">") && i + 1 < arg_size) {
             freopen(my_args[i + 1], "w+", stdout);
@@ -32,7 +32,7 @@ void run_command(int arg_size, char *my_args[]) {
             break;
         }
     }
-
+*/
     switch (fork()) {
         case -1:
             // error occured when forking
