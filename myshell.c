@@ -10,12 +10,24 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+/* Shifts all the arguments in an arg_vector to the left starting at index.
+ */
+void shift_args(int *arg_size, char *arg_vector[], int index) {
+    for (int i = index; i < *arg_size - 1; i++) {
+        arg_vector[i] = arg_vector[i + 1];
+    }
+    if (index < *arg_size) {
+        arg_vector[--*arg_size] = NULL;
+    }
+}
+
+
 /* Given the argument vector my_args, look for an existing binary in the
  * PATH environmental variable and if it exists, execute it with the
  * arguments found in my_args. If list argument is &, it will not wait
  * for it to return before continuing.
  */
-void run_command(int arg_size, char *my_args[]) {
+void run_command(int arg_size, char *my_args[], int fds[]) {
     int bg = 0;
 
     if (!strcmp(my_args[arg_size - 1], "&")) {
@@ -26,17 +38,9 @@ void run_command(int arg_size, char *my_args[]) {
         bg = 1;
     }
 
-    int fd = 0;
-    for (int i = 0; i < arg_size; i++) {
-        if (!strcmp(my_args[i], ">") && i + 1 < arg_size) {
-            fd = open(my_args[i + 1], O_RDWR | O_CREAT | O_APPEND, 0644);
-            my_args[i] = NULL;
-            break;
-        }
-    }
+    int save_out = dup(fileno(stdout));
+    int save_err = dup(fileno(stderr));
 
-    int fds[3];
-    pipe(fds);
 
     switch (fork()) {
         case -1:
@@ -45,10 +49,10 @@ void run_command(int arg_size, char *my_args[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            if (fd) {
-                dup2(fd, fileno(stdout));
-                close(fd);
-            }
+            dup2(fds[0], fileno(stdin));
+            close(fds[0]);
+            dup2(fds[1], fileno(stdout));
+            close(fds[1]);
             // successfully forked child process
             if (execvp(*my_args, my_args) < 0) {
                 printf("%s: command not found\n", *my_args);
@@ -60,6 +64,10 @@ void run_command(int arg_size, char *my_args[]) {
             if (!bg) {
                 wait(NULL);
             }
+            dup2(save_out, fileno(stdout));
+            close(save_out);
+            dup2(save_err, fileno(stderr));
+            close(save_err);
             break;
     }
 }
@@ -202,9 +210,43 @@ int main(int argc, char *argv[]) {
                 if (change_dir(path, &old_dir)) {
                     printf("No such file or directory.\n");
                 }
-            } else {
-                run_command(arg_size, arg_vector);
+                continue;
             }
+
+            int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr))};
+            int error = 0;
+
+            for (int i = 0; i < arg_size - 1; i++) {
+                int f = 0;
+                if (!strcmp(arg_vector[i], "<")) {
+                    f = open(arg_vector[i + 1], O_RDONLY, 0644);
+                    if (f > 0) {
+                        fds[0] = f;
+                    }
+                }
+                else if (!strcmp(arg_vector[i], ">")) {
+                    f = open(arg_vector[i + 1], O_RDWR | O_CREAT | O_APPEND, 0644);
+                    if (f > 0) {
+                        fds[1] = f;
+                    }
+                }
+                if (f > 0) {
+                    // remove the two arguments from the vector
+                    shift_args(&arg_size, arg_vector, i);
+                    shift_args(&arg_size, arg_vector, i--); // decrement i because value changed
+                } else if (f < 0) {
+                    printf("%s: No such file.\n", arg_vector[i + 1]);
+                    error = 1;
+                    break;
+                }
+            }
+
+            if (!error) {
+                run_command(arg_size, arg_vector, fds);
+            }
+
+            close(fds[0]);
+            close(fds[1]);
         }
 
         free(prompt);
