@@ -32,7 +32,7 @@ void run_command(int arg_size, char *my_args[], int fds[]) {
 
     if (!strcmp(my_args[arg_size - 1], "&")) {
         // run command in background
-        printf("\n");
+        //printf("\n");
         my_args[arg_size - 1] = NULL;
         arg_size--;
         bg = 1;
