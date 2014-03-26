@@ -9,3 +9,6 @@ get index of a character in a string
 http://stackoverflow.com/questions/3217629/in-c-how-do-i-find-the-index-of-a-character-within-a-string
 
 string seperation code taken from man strsep
+
+io redirecting
+http://stackoverflow.com/questions/8516823/redirecting-output-to-a-file-in-c

@@ -17,6 +17,11 @@ You have control to all your typical commands that you would usually use. Flags 
 If you want to run a program in the background simply use the & argument at the end of your command.
 > ```$ eog picture.jpg &```
 
+### IO Redirection
+* > redirect stdout
+* < redirect stdin
+* >> append stdout
+
 Testing
 -------
 
