@@ -219,13 +219,16 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < arg_size - 1; i++) {
                 int f = 0;
                 if (!strcmp(arg_vector[i], "<")) {
-                    f = open(arg_vector[i + 1], O_RDONLY, 0644);
+                    f = open(arg_vector[i + 1], O_RDONLY);
                     if (f > 0) {
                         fds[0] = f;
                     }
                 }
-                else if (!strcmp(arg_vector[i], ">")) {
-                    f = open(arg_vector[i + 1], O_RDWR | O_CREAT | O_APPEND, 0644);
+                else if (!strcmp(arg_vector[i], ">") || !strcmp(arg_vector[i], ">>")) {
+                    int mode = O_RDWR | O_CREAT;
+                    mode |= !strcmp(arg_vector[i], ">>") ? O_APPEND : O_TRUNC;
+                    
+                    f = open(arg_vector[i + 1], mode);
                     if (f > 0) {
                         fds[1] = f;
                     }
