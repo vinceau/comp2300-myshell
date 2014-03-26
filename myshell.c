@@ -38,10 +38,6 @@ void run_command(int arg_size, char *my_args[], int fds[]) {
         bg = 1;
     }
 
-    int save_out = dup(fileno(stdout));
-    int save_err = dup(fileno(stderr));
-
-
     switch (fork()) {
         case -1:
             // error occured when forking
@@ -64,10 +60,6 @@ void run_command(int arg_size, char *my_args[], int fds[]) {
             if (!bg) {
                 wait(NULL);
             }
-            dup2(save_out, fileno(stdout));
-            close(save_out);
-            dup2(save_err, fileno(stderr));
-            close(save_err);
             break;
     }
 }
