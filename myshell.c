@@ -128,7 +128,7 @@ int index_of(char input[], char c) {
 
 /* Replaces all the tildes in a string with the home environmental variable.
  */
-void parse_input(char **in) {
+void fix_home(char **in) {
     char *input = *in;
     // find index of the ~ in the string
     int index = index_of(input, '~');
@@ -139,8 +139,20 @@ void parse_input(char **in) {
     int rest = (int)strlen(input) - index - 1;
     char *newstring;
     asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest, input + index + 1);
-    parse_input(&newstring); // replace the rest of the tildes 
+    fix_home(&newstring); // replace the rest of the tildes
     *in = newstring;
+}
+
+void parse_input(char string[]) {
+    fix_home(&string);
+//    char *ptr;
+//    ptr = string;
+//    for (int i = 0; i < (int)strlen(string) - 1; i++) {
+//        if (string[i] == '\\' && string[i + 1] == 'n') {
+//            string[i] = '\n';
+//            shift_string(ptr + i, 2);
+//        }
+//    }
 }
 
 /* Save current directory to old then changes the current
@@ -158,7 +170,7 @@ int change_dir(char *path, char **old) {
 void make_vector(char *input, char *arg_vector[], int arg_size) {
     char **ap, *input_string;
     input_string = input;
-    parse_input(&input_string);
+    parse_input(input_string);
 
     // split input into an argument vector by space
     // code based on the bsd man strsep
@@ -226,12 +238,12 @@ int main(int argc, char *argv[]) {
 
             add_history(input);
             eat(input, ' ');
-            pipe_me(input);
-            continue;
+//            pipe_me(input);
+//            continue;
             arg_size = arg_count(input, ' ');
             char *arg_vector[arg_size + 1];
             make_vector(input, arg_vector, arg_size);
-
+            
             // manually handle change directory 
             if (!strcmp(arg_vector[0], "cd")) {
                 char *path = (arg_size == 1) ? getenv("HOME") : arg_vector[1]; 
@@ -273,10 +285,10 @@ int main(int argc, char *argv[]) {
             }
 
             if (!error) {
-                for (int i = 0; i < arg_size; i++) {
-                    printf("%s\n", arg_vector[i]);
-                }
-                //run_command(arg_size, arg_vector, fds);
+//                for (int i = 0; i < arg_size; i++) {
+//                    printf("%s\n", arg_vector[i]);
+//                }
+                run_command(arg_size, arg_vector, fds);
             }
 
             close(fds[0]);
