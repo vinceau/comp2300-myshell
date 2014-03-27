@@ -32,7 +32,6 @@ void run_command(int arg_size, char *my_args[], int fds[]) {
 
     if (!strcmp(my_args[arg_size - 1], "&")) {
         // run command in background
-        //printf("\n");
         my_args[arg_size - 1] = NULL;
         arg_size--;
         bg = 1;
@@ -64,10 +63,11 @@ void run_command(int arg_size, char *my_args[], int fds[]) {
     }
 }
 
-/* Counts the number of arguments in an argument string.
- * Ensures correct handling of quotes and spaces.
+/* Counts the number of arguments in an argument string,
+ * separated by the character split. Ensures correct handling
+ * of quotes. It counts a block of split characters as one.
  */
-int arg_count(char string[]) {
+int arg_count(char string[], char split) {
     int dquote = 0; // flag for waiting double quote
     int squote = 0; // flag for waiting single quote
     int count = 1;
@@ -79,9 +79,9 @@ int arg_count(char string[]) {
         if (c == '\'') {
             squote = (squote) ? 0 : 1; 
         }
-        if (c == ' ' && !dquote && !squote) {
-            // don't count repeated spaces
-            if (i > 0 && string[i - 1] != ' ') {
+        if (c == split && !dquote && !squote) {
+            // don't count repeats
+            if (i > 0 && string[i - 1] != split) {
                 count++;
             }
         }
@@ -89,25 +89,25 @@ int arg_count(char string[]) {
     return count;
 }
 
-/* Shifts all the characters of the string to the left by one.
+/* Shifts all the characters of the string to the left by times.
  * Useful for removing leading white space.
  */
-void shift_string(char string[]) {
-    int len = (int)strlen(string) - 1; 
-    for (int i = 0; i < len; i++) {
-        string[i] = string[i + 1];
+void shift_string(char string[], int times) {
+    int len = (int)strlen(string); 
+    for (int i = 0; i + times < len; i++) {
+        string[i] = string[i + times];
     }
-    string[len] = 0;
+    string[len - times] = 0;
 }
 
-/* Removes leading and trailing spaces of a string.
+/* Removes leading and trailing character c of a string.
  */
-void eat_spaces(char string[]) {
-    while (string[0] == ' ') {
-        shift_string(string);
+void eat(char string[], char c) {
+    while (string[0] == c) {
+        shift_string(string, 1);
     }
     for (int i = (int) strlen(string) - 1; i > 0; i--) {
-        if (string[i] == ' ') {
+        if (string[i] == c) {
             string[i] = 0;
         } else {
             return;
@@ -152,7 +152,8 @@ int change_dir(char *path, char **old) {
     return chdir((!strcmp(path, "-")) ? temp : path);
 } 
 
-/* Given an input string, creates a space seperated argument vector.
+/* Given an input string, creates a space seperated argument vector
+ * and saves it to the address arg_vector.
  */
 void make_vector(char *input, char *arg_vector[], int arg_size) {
     char **ap, *input_string;
@@ -170,6 +171,33 @@ void make_vector(char *input, char *arg_vector[], int arg_size) {
     }
     free(input_string);
 }
+
+void pipe_me(char *string/*, int fds[]*/) {
+    char *input = string;
+    eat(input, '|');
+    int count = 0;
+    char *array[arg_count(input, '|') + 1];
+    printf("arg count: %d\n", arg_count(input, '|'));
+
+    int index;
+    while ((index = index_of(input, '|')) >= 0) {
+        printf("doing something\n");
+        asprintf(&array[count], "%.*s", index, input);
+        eat(array[count++], ' ');
+        shift_string(input, index + 1);
+        eat(input, ' ');
+        eat(input, '|');
+        printf("new input: .%s.\n", input);
+    }
+
+    asprintf(&array[count], "%s", input); 
+    eat(array[count++], ' ');
+
+    for (int i = 0; i < count; i++) {
+        printf("pipe me: .%s.\n", array[i]);
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     char *prompt, *input, *old_dir;
@@ -191,8 +219,11 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
-            eat_spaces(input);
-            arg_size = arg_count(input);
+            eat(input, ' ');
+            printf("%s\n", input);
+            pipe_me(input);
+            continue;
+            arg_size = arg_count(input, ' ');
             char *arg_vector[arg_size + 1];
             make_vector(input, arg_vector, arg_size);
 
