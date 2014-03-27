@@ -177,25 +177,31 @@ void pipe_me(char *string/*, int fds[]*/) {
     eat(input, '|');
     int count = 0;
     char *array[arg_count(input, '|') + 1];
-    printf("arg count: %d\n", arg_count(input, '|'));
+    //printf("arg count: %d\n", arg_count(input, '|'));
 
     int index;
     while ((index = index_of(input, '|')) >= 0) {
-        printf("doing something\n");
+        //printf("doing something\n");
         asprintf(&array[count], "%.*s", index, input);
         eat(array[count++], ' ');
         shift_string(input, index + 1);
         eat(input, ' ');
         eat(input, '|');
-        printf("new input: .%s.\n", input);
+        //printf("new input: .%s.\n", input);
     }
 
     asprintf(&array[count], "%s", input); 
     eat(array[count++], ' ');
 
     for (int i = 0; i < count; i++) {
-        printf("pipe me: .%s.\n", array[i]);
+        while (strlen(array[i]) <= 0) {
+            shift_args(&count, array, i);
+        }
+        printf(".%s.\n", array[i]);
     }
+
+    //char *arg_vector[][] 
+
 }
 
 
@@ -220,7 +226,6 @@ int main(int argc, char *argv[]) {
 
             add_history(input);
             eat(input, ' ');
-            printf("%s\n", input);
             pipe_me(input);
             continue;
             arg_size = arg_count(input, ' ');
@@ -268,7 +273,10 @@ int main(int argc, char *argv[]) {
             }
 
             if (!error) {
-                run_command(arg_size, arg_vector, fds);
+                for (int i = 0; i < arg_size; i++) {
+                    printf("%s\n", arg_vector[i]);
+                }
+                //run_command(arg_size, arg_vector, fds);
             }
 
             close(fds[0]);
