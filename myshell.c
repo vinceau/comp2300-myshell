@@ -184,6 +184,51 @@ void make_vector(char *input, char *arg_vector[], int arg_size) {
     free(input_string);
 }
 
+int next_index(char c, char string[], int after) {
+    for (int i = after; i < strlen(string); i++) {
+        if (c == string[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void check_io(char string[], int fds[]) {
+    for (int i = 0; i < strlen(string); i++) {
+        char c = string[i];
+        if (c == '<') {
+            int index = next_index(' ', string, i);
+        }
+    }
+    for (int i = 0; i < arg_size - 1; i++) {
+        int f = 0;
+        if (!strcmp(arg_vector[i], "<")) {
+            f = open(arg_vector[i + 1], O_RDONLY, 0644);
+            if (f > 0) {
+                fds[0] = f;
+            }
+        }
+        else if (!strcmp(arg_vector[i], ">") || !strcmp(arg_vector[i], ">>")) {
+            int mode = O_RDWR | O_CREAT;
+            mode |= !strcmp(arg_vector[i], ">>") ? O_APPEND : O_TRUNC;
+            
+            f = open(arg_vector[i + 1], mode, 0644);
+            if (f > 0) {
+                fds[1] = f;
+            }
+        }
+        if (f > 0) {
+            // remove the two arguments from the vector
+            shift_args(&arg_size, arg_vector, i);
+            shift_args(&arg_size, arg_vector, i--); // decrement i because value changed
+        } else if (f < 0) {
+            printf("%s: No such file.\n", arg_vector[i + 1]);
+            error = 1;
+            break;
+        }
+    }
+}
+
 void pipe_me(char *string/*, int fds[]*/) {
     char *input = string;
     eat(input, '|');
@@ -210,6 +255,7 @@ void pipe_me(char *string/*, int fds[]*/) {
             shift_args(&count, array, i);
         }
         printf(".%s.\n", array[i]);
+
     }
 
     //char *arg_vector[][] 
@@ -238,8 +284,8 @@ int main(int argc, char *argv[]) {
 
             add_history(input);
             eat(input, ' ');
-//            pipe_me(input);
-//            continue;
+            pipe_me(input);
+            continue;
             arg_size = arg_count(input, ' ');
             char *arg_vector[arg_size + 1];
             make_vector(input, arg_vector, arg_size);
@@ -285,10 +331,10 @@ int main(int argc, char *argv[]) {
             }
 
             if (!error) {
-//                for (int i = 0; i < arg_size; i++) {
-//                    printf("%s\n", arg_vector[i]);
-//                }
-                run_command(arg_size, arg_vector, fds);
+                for (int i = 0; i < arg_size; i++) {
+                    printf("%s\n", arg_vector[i]);
+                }
+                //run_command(arg_size, arg_vector, fds);
             }
 
             close(fds[0]);
