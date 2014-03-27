@@ -12,3 +12,6 @@ string seperation code taken from man strsep
 
 io redirecting
 http://stackoverflow.com/questions/8516823/redirecting-output-to-a-file-in-c
+
+pipes!!
+http://stackoverflow.com/questions/13801175/classic-c-using-pipes-in-execvp-function-stdin-and-stdout-redirection
