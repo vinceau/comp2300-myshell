@@ -151,20 +151,20 @@ void fix_home(char **in) {
     *in = newstring;
 }
 
-void parse_input(char string[]) {
-    fix_home(&string);
-//    for (int i = 0; i < (int)strlen(string) - 1; i++) {
-//        if (string[i] == '\\' && string[i + 1] == 'n') {
-//            string[i] = '\n';
-//            shift_string(i, string, 2);
-//        }
-//    }
+/* Removes excess spaces and replaces ~ with the users home path.
+ */
+void parse_input(char **string) {
+    eat(*string, ' ');
+    fix_home(string);
 }
 
 /* Save current directory to old then changes the current
- * directory to path.
+ * directory to path. If path is empty, it will default back
+ * to the users home directory.
  */
 int change_dir(char *path, char **old) {
+    eat(path, ' ');
+    path = ((int)strlen(path) > 0) ? path : getenv("HOME"); 
     char *temp = *old;
     *old = getcwd(NULL, 0);
     return chdir((!strcmp(path, "-")) ? temp : path);
@@ -176,7 +176,6 @@ int change_dir(char *path, char **old) {
 void make_vector(char *input, char *arg_vector[], int arg_size) {
     char **ap, *input_string;
     input_string = input;
-    parse_input(input_string);
 
     // split input into an argument vector by space
     // code based on the bsd man strsep
@@ -237,11 +236,17 @@ int check_io(char string[], int fds[]) {
             }
         }
         if (string[i] == '>') {
+            int mode = O_RDWR | O_CREAT;
+            if (string[i + 1] == '>') {
+                mode |= O_APPEND;
+                shift_string(i, string, 1);
+            } else {
+                mode |= O_TRUNC;
+            }
             char *output_file;
             if (!save_next_arg(i, string, &output_file)) {
                 shift_string(i, string, (int)strlen(output_file) + offset);
                 close(fds[1]);
-                int mode = O_RDWR | O_CREAT | O_TRUNC;
                 if ((fds[1] = open(output_file, mode, 0644)) < 0) {
                     printf("Error: Couldn't open %s.\n", output_file);
                     error = 1;
@@ -253,35 +258,6 @@ int check_io(char string[], int fds[]) {
         }
     }
     
-    /* 
-    for (int i = 0; i < arg_size - 1; i++) {
-        int f = 0;
-        if (!strcmp(arg_vector[i], "<")) {
-            f = open(arg_vector[i + 1], O_RDONLY, 0644);
-            if (f > 0) {
-                fds[0] = f;
-            }
-        }
-        else if (!strcmp(arg_vector[i], ">") || !strcmp(arg_vector[i], ">>")) {
-            int mode = O_RDWR | O_CREAT;
-            mode |= !strcmp(arg_vector[i], ">>") ? O_APPEND : O_TRUNC;
-            
-            f = open(arg_vector[i + 1], mode, 0644);
-            if (f > 0) {
-                fds[1] = f;
-            }
-        }
-        if (f > 0) {
-            // remove the two arguments from the vector
-            shift_args(&arg_size, arg_vector, i);
-            shift_args(&arg_size, arg_vector, i--); // decrement i because value changed
-        } else if (f < 0) {
-            printf("%s: No such file.\n", arg_vector[i + 1]);
-            error = 1;
-            break;
-        }
-    }
-    */
     eat(string, ' ');
     return error;
 }
@@ -307,8 +283,17 @@ void pipe_me(char *string, int fds[]) {
     asprintf(&array[count], "%s", input); 
     eat(array[count++], ' ');
 
-    int des_p[3];
-    if (pipe(des_p) < 0) {
+    int bg = 0;
+    char *last = array[count - 1];
+    if (last[(int)strlen(last) - 1] == '&') {
+        // run command in background
+        bg = 1;
+        shift_string((int)strlen(last) - 1, last, 1);
+        eat(last, ' ');
+    }
+    
+    int pipe_files[3];
+    if (pipe(pipe_files) < 0) {
         printf("Error: Failed to pipe.");
         exit(EXIT_FAILURE);
     }
@@ -334,13 +319,13 @@ void pipe_me(char *string, int fds[]) {
                 if (i == 0) {
                     dup2(fds[0], fileno(stdin));
                 } else {
-                    dup2(des_p[0], fileno(stdin));
+                    dup2(pipe_files[0], fileno(stdin));
                 }
                 // final output
                 if (i == count - 1) {
                     dup2(fds[1], fileno(stdout));
                 } else {
-                    dup2(des_p[1], fileno(stdout));
+                    dup2(pipe_files[1], fileno(stdout));
                 }
                 
                 // successfully forked child process
@@ -351,21 +336,20 @@ void pipe_me(char *string, int fds[]) {
                 break;
             default:
                 // parent process
-                //if (!bg) {
+                if (!bg) {
                     wait(NULL);
-                //}
+                }
                 break;
         }
-        //printf(".%s.\n", array[i]);
+        printf(".%s.\n", array[i]);
 
     }
 
 }
 
-
 int main(int argc, char *argv[]) {
     char *prompt, *input, *old_dir;
-    int arg_size, quit = 0;
+    int quit = 0;
 
     while(!quit) {
         asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
@@ -383,28 +367,25 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
-            eat(input, ' ');
-            int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr))};
-            
-            if (!check_io(input, fds)) {
-                //printf("input file: %d, output file: %d\n", fds[0], fds[1]);
-                pipe_me(input, fds);
-            }
+            parse_input(&input);
 
-            /*
-            arg_size = arg_count(input, ' ');
-            char *arg_vector[arg_size + 1];
-            make_vector(input, arg_vector, arg_size);
-            
             // manually handle change directory 
-            if (!strcmp(arg_vector[0], "cd")) {
-                char *path = (arg_size == 1) ? getenv("HOME") : arg_vector[1]; 
-                if (change_dir(path, &old_dir)) {
+            char check[3];
+            strlcpy(check, input, 3);
+            char *ptr;
+            ptr = input;
+            if (!strcmp(check, "cd")) {
+                if (change_dir(ptr + 2, &old_dir)) {
                     printf("No such file or directory.\n");
                 }
                 continue;
             }
-            */
+
+            int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr))};
+            
+            if (!check_io(input, fds)) {
+                pipe_me(input, fds);
+            }
 
             close(fds[0]);
             close(fds[1]);
