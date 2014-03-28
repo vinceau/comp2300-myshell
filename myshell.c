@@ -92,25 +92,33 @@ int arg_count(char string[], char split) {
 /* Shifts all the characters of the string to the left by times.
  * Useful for removing leading white space.
  */
-void shift_string(char string[], int times) {
-    int len = (int)strlen(string); 
-    for (int i = 0; i + times < len; i++) {
-        string[i] = string[i + times];
+void shift_string(int from, char string[], int times) {
+    int len = (int)strlen(string);
+    if (from < len) {
+        for (int i = from; i + times < len; i++) {
+            string[i] = string[i + times];
+        }
+        string[len - times] = 0;
     }
-    string[len - times] = 0;
 }
 
-/* Removes leading and trailing character c of a string.
+/* Removes leading, trailing and duplicates of character c from a string.
  */
 void eat(char string[], char c) {
     while (string[0] == c) {
-        shift_string(string, 1);
+        shift_string(0, string, 1);
     }
     for (int i = (int) strlen(string) - 1; i > 0; i--) {
         if (string[i] == c) {
             string[i] = 0;
         } else {
-            return;
+            break;
+        }
+    }
+    // remove duplicate spaces
+    for (int i = 1; i < (int)strlen(string) - 1; i++) {
+        while (string[i] == c && string[i + 1] == c) {
+            shift_string(i + 1, string, 1);
         }
     }
 }
@@ -145,12 +153,10 @@ void fix_home(char **in) {
 
 void parse_input(char string[]) {
     fix_home(&string);
-//    char *ptr;
-//    ptr = string;
 //    for (int i = 0; i < (int)strlen(string) - 1; i++) {
 //        if (string[i] == '\\' && string[i + 1] == 'n') {
 //            string[i] = '\n';
-//            shift_string(ptr + i, 2);
+//            shift_string(i, string, 2);
 //        }
 //    }
 }
@@ -185,7 +191,7 @@ void make_vector(char *input, char *arg_vector[], int arg_size) {
 }
 
 int next_index(char c, char string[], int after) {
-    for (int i = after; i < strlen(string); i++) {
+    for (int i = after; i < (int)strlen(string); i++) {
         if (c == string[i]) {
             return i;
         }
@@ -193,13 +199,61 @@ int next_index(char c, char string[], int after) {
     return -1;
 }
 
-void check_io(char string[], int fds[]) {
-    for (int i = 0; i < strlen(string); i++) {
-        char c = string[i];
-        if (c == '<') {
-            int index = next_index(' ', string, i);
+int save_next_arg(int from, char string[], char **save_to) {
+    char *ptr;
+    ptr = string;
+    if (from < (int)strlen(string)) {
+        int offset = from + ((string[from + 1] == ' ') ? 2 : 1);
+        int index = next_index(' ', string, offset);
+        int size = ((index < 0) ? (int)strlen(string) : index) - offset;
+        asprintf(save_to, "%.*s", size, ptr + offset);
+        return 0;
+    }
+    // error occured, nothing saved
+    return -1;
+}
+
+int check_io(char string[], int fds[]) {
+    int error = 0;
+    for (int i = 0; i < (int)strlen(string); i++) {
+        if (i == (int)strlen(string) - 1 && (string[i] == '<' || string[i]  == '>')) {
+            printf("Error: file name expected after %c.\n", string[i]);
+            error = 1;
+            break;
+        }
+        int offset = (string[i + 1] == ' ') ? 2 : 1;
+        if (string[i] == '<') {
+            char *input_file;
+            if (!save_next_arg(i, string, &input_file)) {
+                shift_string(i, string, (int)strlen(input_file) + offset);
+                close(fds[0]);
+                if ((fds[0] = open(input_file, O_RDONLY, 0644)) < 0) {
+                    printf("Error: %s not found.\n", input_file);
+                    error = 1;
+                }
+                free(input_file);
+            } else {
+                error = 1;
+            }
+        }
+        if (string[i] == '>') {
+            char *output_file;
+            if (!save_next_arg(i, string, &output_file)) {
+                shift_string(i, string, (int)strlen(output_file) + offset);
+                close(fds[1]);
+                int mode = O_RDWR | O_CREAT | O_TRUNC;
+                if ((fds[1] = open(output_file, mode, 0644)) < 0) {
+                    printf("Error: Couldn't open %s.\n", output_file);
+                    error = 1;
+                }
+                free(output_file);
+            } else {
+                error = 1;
+            }
         }
     }
+    
+    /* 
     for (int i = 0; i < arg_size - 1; i++) {
         int f = 0;
         if (!strcmp(arg_vector[i], "<")) {
@@ -227,9 +281,12 @@ void check_io(char string[], int fds[]) {
             break;
         }
     }
+    */
+    eat(string, ' ');
+    return error;
 }
 
-void pipe_me(char *string/*, int fds[]*/) {
+void pipe_me(char *string, int fds[]) {
     char *input = string;
     eat(input, '|');
     int count = 0;
@@ -241,7 +298,7 @@ void pipe_me(char *string/*, int fds[]*/) {
         //printf("doing something\n");
         asprintf(&array[count], "%.*s", index, input);
         eat(array[count++], ' ');
-        shift_string(input, index + 1);
+        shift_string(0, input, index + 1);
         eat(input, ' ');
         eat(input, '|');
         //printf("new input: .%s.\n", input);
@@ -284,8 +341,14 @@ int main(int argc, char *argv[]) {
 
             add_history(input);
             eat(input, ' ');
-            pipe_me(input);
-            continue;
+            int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr))};
+            
+            if (!check_io(input, fds)) {
+                //printf("input file: %d, output file: %d\n", fds[0], fds[1]);
+                pipe_me(input, fds);
+            }
+
+            /*
             arg_size = arg_count(input, ' ');
             char *arg_vector[arg_size + 1];
             make_vector(input, arg_vector, arg_size);
@@ -298,44 +361,7 @@ int main(int argc, char *argv[]) {
                 }
                 continue;
             }
-
-            int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr))};
-            int error = 0;
-
-            for (int i = 0; i < arg_size - 1; i++) {
-                int f = 0;
-                if (!strcmp(arg_vector[i], "<")) {
-                    f = open(arg_vector[i + 1], O_RDONLY, 0644);
-                    if (f > 0) {
-                        fds[0] = f;
-                    }
-                }
-                else if (!strcmp(arg_vector[i], ">") || !strcmp(arg_vector[i], ">>")) {
-                    int mode = O_RDWR | O_CREAT;
-                    mode |= !strcmp(arg_vector[i], ">>") ? O_APPEND : O_TRUNC;
-                    
-                    f = open(arg_vector[i + 1], mode, 0644);
-                    if (f > 0) {
-                        fds[1] = f;
-                    }
-                }
-                if (f > 0) {
-                    // remove the two arguments from the vector
-                    shift_args(&arg_size, arg_vector, i);
-                    shift_args(&arg_size, arg_vector, i--); // decrement i because value changed
-                } else if (f < 0) {
-                    printf("%s: No such file.\n", arg_vector[i + 1]);
-                    error = 1;
-                    break;
-                }
-            }
-
-            if (!error) {
-                for (int i = 0; i < arg_size; i++) {
-                    printf("%s\n", arg_vector[i]);
-                }
-                //run_command(arg_size, arg_vector, fds);
-            }
+            */
 
             close(fds[0]);
             close(fds[1]);
