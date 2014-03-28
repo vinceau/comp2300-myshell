@@ -307,15 +307,58 @@ void pipe_me(char *string, int fds[]) {
     asprintf(&array[count], "%s", input); 
     eat(array[count++], ' ');
 
+    int des_p[3];
+    if (pipe(des_p) < 0) {
+        printf("Error: Failed to pipe.");
+        exit(EXIT_FAILURE);
+    }
+    
     for (int i = 0; i < count; i++) {
+        // remove potentially empty commands
         while (strlen(array[i]) <= 0) {
             shift_args(&count, array, i);
         }
-        printf(".%s.\n", array[i]);
+
+        int arg_size = arg_count(array[i], ' ');
+        char *my_args[arg_size + 1];
+        make_vector(array[i], my_args, arg_size);
+
+        switch (fork()) {
+            case -1:
+                // error occured when forking
+                printf("Failed to fork a child process.\n");
+                exit(EXIT_FAILURE);
+                break;
+            case 0:
+                // first input
+                if (i == 0) {
+                    dup2(fds[0], fileno(stdin));
+                } else {
+                    dup2(des_p[0], fileno(stdin));
+                }
+                // final output
+                if (i == count - 1) {
+                    dup2(fds[1], fileno(stdout));
+                } else {
+                    dup2(des_p[1], fileno(stdout));
+                }
+                
+                // successfully forked child process
+                if (execvp(*my_args, my_args) < 0) {
+                    printf("%s: command not found\n", *my_args);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            default:
+                // parent process
+                //if (!bg) {
+                    wait(NULL);
+                //}
+                break;
+        }
+        //printf(".%s.\n", array[i]);
 
     }
-
-    //char *arg_vector[][] 
 
 }
 
