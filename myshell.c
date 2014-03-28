@@ -370,8 +370,8 @@ int main(int argc, char *argv[]) {
             parse_input(&input);
 
             // manually handle change directory 
-            char check[3];
-            strlcpy(check, input, 3);
+            char *check;
+            asprintf(&check, "%.*s", 2, input);
             char *ptr;
             ptr = input;
             if (!strcmp(check, "cd")) {
