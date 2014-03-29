@@ -1,6 +1,8 @@
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
+#include <error.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -331,14 +333,10 @@ int main(int argc, char *argv[]) {
             add_history(input);
             parse_input(&input);
 
-            // manually handle change directory 
-            char *check;
-            asprintf(&check, "%.*s", 2, input);
-            char *ptr;
-            ptr = input;
-            if (!strcmp(check, "cd")) {
-                if (change_dir(ptr + 2, &old_dir)) {
-                    printf("No such file or directory.\n");
+            // manually handle change directory
+            if (strstr(input, "cd") == input) {
+                if (change_dir(&input[2], &old_dir)) {
+                    error(0, errno, "%s", &input[2]);
                 }
                 continue;
             }
