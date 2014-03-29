@@ -306,20 +306,18 @@ void pipe_me(char *string, int fds[]) {
 
 int main(int argc, char *argv[]) {
     char *prompt, *input, *old_dir;
-    int quit = 0;
 
-    while(!quit) {
+    for (;;) {
         asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
         input = readline(prompt);
 
         if (input == NULL) {
             printf("\n");
-            continue;
+            break;
         }
 
         else if (strlen(input) > 0) {
             if (!strcmp(input, "exit")) {
-                quit = 1;
                 break;
             }
 
@@ -347,6 +345,9 @@ int main(int argc, char *argv[]) {
         free(prompt);
         free(input);
     }
+
+    free(prompt);
+    free(input);
 
     return 0;
 }
