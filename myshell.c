@@ -333,7 +333,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            int fds[2] = {dup(fileno(stdout)), dup(fileno(stderr))};
+            int fds[2] = {dup(fileno(stdin)), dup(fileno(stdout))};
             
             if (!check_io(input, fds)) {
                 pipe_me(input, fds);
