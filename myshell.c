@@ -176,7 +176,7 @@ int check_io(char string[], int fds[]) {
     int error = 0;
     for (int i = 0; i < (int)strlen(string); i++) {
         if (i == (int)strlen(string) - 1 && (string[i] == '<' || string[i]  == '>')) {
-            printf("Error: file name expected after %c.\n", string[i]);
+            fprintf(stderr, "Error: file name expected after %c.\n", string[i]);
             error = 1;
             break;
         }
@@ -187,7 +187,7 @@ int check_io(char string[], int fds[]) {
                 shift_string(i, string, (int)strlen(input_file) + offset);
                 close(fds[0]);
                 if ((fds[0] = open(input_file, O_RDONLY, 0644)) < 0) {
-                    printf("Error: %s not found.\n", input_file);
+                    fprintf(stderr, "Error: %s not found.\n", input_file);
                     error = 1;
                 }
                 free(input_file);
@@ -208,7 +208,7 @@ int check_io(char string[], int fds[]) {
                 shift_string(i, string, (int)strlen(output_file) + offset);
                 close(fds[1]);
                 if ((fds[1] = open(output_file, mode, 0644)) < 0) {
-                    printf("Error: Couldn't open %s.\n", output_file);
+                    fprintf(stderr, "Error: Couldn't open %s.\n", output_file);
                     error = 1;
                 }
                 free(output_file);
@@ -229,13 +229,14 @@ void pipe_me(char *string, int fds[]) {
     char *cmd_array[arg_count(input, '|') + 1];
     //printf("arg count: %d\n", arg_count(input, '|'));
 
+    // process input and push commands into the cmd_array
     int index;
     while ((index = index_of(input, '|')) >= 0) {
         //printf("doing something\n");
-        asprintf(&cmd_array[count], "%.*s", index, input);
-        eat(cmd_array[count++], ' ');
-        shift_string(0, input, index + 1);
-        eat(input, ' ');
+        asprintf(&cmd_array[count], "%.*s", index, input);  // cut a substring of input until the pipe
+        eat(cmd_array[count++], ' ');                       // push it into the cmd array
+        shift_string(0, input, index + 1);                  // push the string backwards :(
+        eat(input, ' ');                                    // clean the string
         eat(input, '|');
         //printf("new input: .%s.\n", input);
     }
@@ -254,8 +255,7 @@ void pipe_me(char *string, int fds[]) {
     
     int pipe_files[3];
     if (pipe(pipe_files) < 0) {
-        printf("Error: Failed to pipe.");
-        exit(EXIT_FAILURE);
+        error(EXIT_FAILURE, errno, "Failed to pipe");
     }
     
     for (int i = 0; i < count; i++) {
@@ -271,8 +271,7 @@ void pipe_me(char *string, int fds[]) {
         switch (fork()) {
             case -1:
                 // error occured when forking
-                printf("Failed to fork a child process.\n");
-                exit(EXIT_FAILURE);
+                error(EXIT_FAILURE, errno, "Failed to fork a child process");
                 break;
             case 0: // child process
                 // first input
@@ -293,12 +292,11 @@ void pipe_me(char *string, int fds[]) {
                 }
                 // successfully forked child process
                 if (execvp(*my_args, my_args) < 0) {
-                    printf("%s: command not found\n", *my_args);
-                    exit(EXIT_FAILURE);
+                    error(EXIT_FAILURE, errno, "%s", *my_args);
                 }
                 break;
             default:
-                printf("hello i am the parent.\n");
+                fprintf(stderr, "hello i am the parent.\n");
                 close(pipe_files[1]);
                 // parent process
                 if (!bg) {
