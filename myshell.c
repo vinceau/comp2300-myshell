@@ -315,11 +315,15 @@ int main(int argc, char *argv[]) {
 
         if (input == NULL) {
             printf("\n");
+            free(prompt);
+            free(input);
             break;
         }
 
         else if (strlen(input) > 0) {
             if (!strcmp(input, "exit")) {
+                free(prompt);
+                free(input);
                 break;
             }
 
@@ -331,6 +335,8 @@ int main(int argc, char *argv[]) {
                 if (change_dir(&input[2], &old_dir)) {
                     error(0, errno, "%s", &input[2]);
                 }
+                free(prompt);
+                free(input);
                 continue;
             }
 
@@ -348,8 +354,6 @@ int main(int argc, char *argv[]) {
         free(input);
     }
 
-    free(prompt);
-    free(input);
 
     return 0;
 }
