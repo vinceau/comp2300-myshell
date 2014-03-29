@@ -254,11 +254,12 @@ void pipe_me(char *string, int fds[]) {
     }
     
     int pipe_files[2];
-    if (pipe(pipe_files) < 0) {
-        error(EXIT_FAILURE, errno, "Failed to pipe");
-    }
     
     for (int i = 0; i < count; i++) {
+        if (pipe(pipe_files) < 0) {
+            error(EXIT_FAILURE, errno, "Failed to pipe");
+        }
+
         // remove potentially empty commands
         while (strlen(cmd_array[i]) <= 0) {
             shift_args(&count, cmd_array, i);
