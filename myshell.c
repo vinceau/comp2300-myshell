@@ -108,6 +108,7 @@ void fix_home(char **in) {
     char *newstring;
     asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest, input + index + 1);
     fix_home(&newstring); // replace the rest of the tildes
+    free(*in);
     *in = newstring;
 }
 
