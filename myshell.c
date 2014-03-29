@@ -274,7 +274,6 @@ void pipe_me(char *string, int fds[]) {
                     close(pipe_in[1]);
                 }
                 dup2(pipe_in[0], fileno(stdin));
-                close(pipe_in[0]);  // we probably need this
                 // final output
                 if (i == count - 1) {
                     dup2(fds[1], fileno(stdout));
@@ -290,7 +289,6 @@ void pipe_me(char *string, int fds[]) {
                 break;
             default:
                 fprintf(stderr, "hello i am the parent.\n");
-                close(pipe_in[1]);
                 close(pipe_in[0]);
                 pipe_in[0] = pipe_out[0];
                 pipe_in[1] = pipe_out[1];
