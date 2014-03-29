@@ -1,14 +1,14 @@
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
-#include <readline/history.h>
-#include <readline/readline.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <readline/history.h>
+#include <readline/readline.h>
 
 /* Shifts all the arguments in an arg_vector to the left starting at index.
  */
