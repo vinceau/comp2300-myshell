@@ -291,7 +291,9 @@ void pipe_me(char *string, int fds[]) {
                 break;
             default:
                 fprintf(stderr, "hello i am the parent.\n");
-                close(pipe_in[1]);
+                if (pipe_in[1] != -1) {
+                    close(pipe_in[1]);
+                }
                 close(pipe_in[0]);
                 pipe_in[0] = pipe_out[0];
                 pipe_in[1] = pipe_out[1];
