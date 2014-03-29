@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
 
         if (input == NULL) {
             printf("\n");
-            break;
+            continue;
         }
 
         else if (strlen(input) > 0) {
