@@ -255,10 +255,7 @@ void pipe_me(char *string, int fds[]) {
 
     int pipe_out[2];
     int pipe_in[2];
-    if (pipe(pipe_in) < 0) {
-        error(EXIT_FAILURE, errno, "Failed to pipe");
-    }
-    
+    pipe_in[0] = fds[0];
     
     for (int i = 0; i < count; i++) {
         if (pipe(pipe_out) < 0) {
@@ -274,14 +271,8 @@ void pipe_me(char *string, int fds[]) {
                 error(EXIT_FAILURE, errno, "Failed to fork a child process");
                 break;
             case 0: // child process
-                // first input
-                if (i == 0) {
-                    dup2(fds[0], fileno(stdin));
-                    close(fds[0]);
-                } else {
-                    dup2(pipe_in[0], fileno(stdin));
-                    close(pipe_in[0]);
-                }
+                dup2(pipe_in[0], fileno(stdin));
+                close(pipe_in[0]);  // we probably need this
                 // final output
                 if (i == count - 1) {
                     dup2(fds[1], fileno(stdout));
