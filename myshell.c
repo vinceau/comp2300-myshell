@@ -223,8 +223,7 @@ int check_io(char string[], int fds[]) {
     return error;
 }
 
-void pipe_me(char *string, int fds[]) {
-    char *input = string;
+void pipe_me(char *input, int fds[]) {
     eat(input, '|');
     int count = 0;
     char *cmd_array[arg_count(input, '|') + 1];
