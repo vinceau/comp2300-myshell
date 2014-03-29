@@ -45,12 +45,12 @@ int arg_count(char string[], char split) {
     int squote = 0; // flag for waiting single quote
     int count = 1;
     for (int i = 0; i < (int)strlen(string); i++) {
-        char c = string[i]; 
+        char c = string[i];
         if (c == '\"') {
-            dquote = (dquote) ? 0 : 1; 
+            dquote = (dquote) ? 0 : 1;
         }
         if (c == '\'') {
-            squote = (squote) ? 0 : 1; 
+            squote = (squote) ? 0 : 1;
         }
         if (c == split && !dquote && !squote) {
             // don't count repeats
@@ -75,7 +75,7 @@ void eat(char string[], char c) {
             break;
         }
     }
-    // remove repeating characters 
+    // remove repeating characters
     for (int i = 1; i < (int)strlen(string) - 1; i++) {
         while (string[i] == c && string[i + 1] == c) {
             shift_string(i + 1, string, 1);
@@ -124,11 +124,11 @@ void parse_input(char **string) {
  */
 int change_dir(char *path, char **old) {
     eat(path, ' ');
-    path = ((int)strlen(path) > 0) ? path : getenv("HOME"); 
+    path = ((int)strlen(path) > 0) ? path : getenv("HOME");
     char *temp = *old;
     *old = getcwd(NULL, 0);
     return chdir((!strcmp(path, "-")) ? temp : path);
-} 
+}
 
 /* Given an input string, creates a space seperated argument vector
  * and saves it to the address arg_vector.
@@ -217,7 +217,7 @@ int check_io(char string[], int fds[]) {
             }
         }
     }
-    
+
     eat(string, ' ');
     return error;
 }
@@ -241,7 +241,7 @@ void pipe_me(char *string, int fds[]) {
         //printf("new input: .%s.\n", input);
     }
 
-    asprintf(&cmd_array[count], "%s", input); 
+    asprintf(&cmd_array[count], "%s", input);
     eat(cmd_array[count++], ' ');
 
     int bg = 0;
@@ -252,9 +252,9 @@ void pipe_me(char *string, int fds[]) {
         shift_string((int)strlen(last) - 1, last, 1);
         eat(last, ' ');
     }
-    
+
     int pipe_files[2];
-    
+
     for (int i = 0; i < count; i++) {
         if (pipe(pipe_files) < 0) {
             error(EXIT_FAILURE, errno, "Failed to pipe");
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
             }
 
             int fds[3] = {dup(fileno(stdout)), dup(fileno(stderr)), 0};
-            
+
             if (!check_io(input, fds)) {
                 pipe_me(input, fds);
             }
