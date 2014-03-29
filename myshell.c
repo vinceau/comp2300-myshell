@@ -133,7 +133,7 @@ int change_dir(char *path, char **old) {
 /* Given an input string, creates a space seperated argument vector
  * and saves it to the address arg_vector.
  */
-void make_vector(char *input, char *arg_vector[], int arg_size) {
+void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
     char **ap, *input_string;
     input_string = input;
 
@@ -226,25 +226,25 @@ void pipe_me(char *string, int fds[]) {
     char *input = string;
     eat(input, '|');
     int count = 0;
-    char *array[arg_count(input, '|') + 1];
+    char *cmd_array[arg_count(input, '|') + 1];
     //printf("arg count: %d\n", arg_count(input, '|'));
 
     int index;
     while ((index = index_of(input, '|')) >= 0) {
         //printf("doing something\n");
-        asprintf(&array[count], "%.*s", index, input);
-        eat(array[count++], ' ');
+        asprintf(&cmd_array[count], "%.*s", index, input);
+        eat(cmd_array[count++], ' ');
         shift_string(0, input, index + 1);
         eat(input, ' ');
         eat(input, '|');
         //printf("new input: .%s.\n", input);
     }
 
-    asprintf(&array[count], "%s", input); 
-    eat(array[count++], ' ');
+    asprintf(&cmd_array[count], "%s", input); 
+    eat(cmd_array[count++], ' ');
 
     int bg = 0;
-    char *last = array[count - 1];
+    char *last = cmd_array[count - 1];
     if (last[(int)strlen(last) - 1] == '&') {
         // run command in background
         bg = 1;
@@ -260,13 +260,13 @@ void pipe_me(char *string, int fds[]) {
     
     for (int i = 0; i < count; i++) {
         // remove potentially empty commands
-        while (strlen(array[i]) <= 0) {
-            shift_args(&count, array, i);
+        while (strlen(cmd_array[i]) <= 0) {
+            shift_args(&count, cmd_array, i);
         }
 
-        int arg_size = arg_count(array[i], ' ');
+        int arg_size = arg_count(cmd_array[i], ' ');
         char *my_args[arg_size + 1];
-        make_vector(array[i], my_args, arg_size);
+        make_arg_vector(cmd_array[i], my_args, arg_size);
 
         switch (fork()) {
             case -1:
@@ -306,7 +306,7 @@ void pipe_me(char *string, int fds[]) {
                 }
                 break;
         }
-        //printf(".%s.\n", array[i]);
+        //printf(".%s.\n", cmd_array[i]);
     }
 
 }
