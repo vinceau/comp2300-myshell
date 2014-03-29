@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
         if (input == NULL) {
             printf("\n");
-            quit = 1;
+            continue;
         }
 
         else if (strlen(input) > 0) {
