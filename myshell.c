@@ -21,45 +21,16 @@ void shift_args(int *arg_size, char *arg_vector[], int index) {
     }
 }
 
-
-/* Given the argument vector my_args, look for an existing binary in the
- * PATH environmental variable and if it exists, execute it with the
- * arguments found in my_args. If list argument is &, it will not wait
- * for it to return before continuing.
+/* Shifts all the characters of the string to the left by times.
+ * Useful for removing leading white space.
  */
-void run_command(int arg_size, char *my_args[], int fds[]) {
-    int bg = 0;
-
-    if (!strcmp(my_args[arg_size - 1], "&")) {
-        // run command in background
-        my_args[arg_size - 1] = NULL;
-        arg_size--;
-        bg = 1;
-    }
-
-    switch (fork()) {
-        case -1:
-            // error occured when forking
-            printf("Failed to fork a child process.\n");
-            exit(EXIT_FAILURE);
-            break;
-        case 0:
-            dup2(fds[0], fileno(stdin));
-            close(fds[0]);
-            dup2(fds[1], fileno(stdout));
-            close(fds[1]);
-            // successfully forked child process
-            if (execvp(*my_args, my_args) < 0) {
-                printf("%s: command not found\n", *my_args);
-                exit(EXIT_FAILURE);
-            }
-            break;
-        default:
-            // parent process
-            if (!bg) {
-                wait(NULL);
-            }
-            break;
+void shift_string(int from, char string[], int times) {
+    int len = (int)strlen(string);
+    if (from < len) {
+        for (int i = from; i + times < len; i++) {
+            string[i] = string[i + times];
+        }
+        string[len - times] = 0;
     }
 }
 
@@ -89,19 +60,6 @@ int arg_count(char string[], char split) {
     return count;
 }
 
-/* Shifts all the characters of the string to the left by times.
- * Useful for removing leading white space.
- */
-void shift_string(int from, char string[], int times) {
-    int len = (int)strlen(string);
-    if (from < len) {
-        for (int i = from; i + times < len; i++) {
-            string[i] = string[i + times];
-        }
-        string[len - times] = 0;
-    }
-}
-
 /* Removes leading, trailing and duplicates of character c from a string.
  */
 void eat(char string[], char c) {
@@ -115,7 +73,7 @@ void eat(char string[], char c) {
             break;
         }
     }
-    // remove duplicate spaces
+    // remove repeating characters 
     for (int i = 1; i < (int)strlen(string) - 1; i++) {
         while (string[i] == c && string[i + 1] == c) {
             shift_string(i + 1, string, 1);
@@ -314,20 +272,23 @@ void pipe_me(char *string, int fds[]) {
                 printf("Failed to fork a child process.\n");
                 exit(EXIT_FAILURE);
                 break;
-            case 0:
+            case 0: // child process
                 // first input
                 if (i == 0) {
                     dup2(fds[0], fileno(stdin));
+                    close(fds[0]);
                 } else {
                     dup2(pipe_files[0], fileno(stdin));
+                    close(pipe_files[0]);
                 }
                 // final output
                 if (i == count - 1) {
                     dup2(fds[1], fileno(stdout));
+                    close(fds[1]);
                 } else {
                     dup2(pipe_files[1], fileno(stdout));
+                    close(pipe_files[1]);
                 }
-                
                 // successfully forked child process
                 if (execvp(*my_args, my_args) < 0) {
                     printf("%s: command not found\n", *my_args);
@@ -335,14 +296,15 @@ void pipe_me(char *string, int fds[]) {
                 }
                 break;
             default:
+                printf("hello i am the parent.\n");
+                close(pipe_files[1]);
                 // parent process
                 if (!bg) {
                     wait(NULL);
                 }
                 break;
         }
-        printf(".%s.\n", array[i]);
-
+        //printf(".%s.\n", array[i]);
     }
 
 }
