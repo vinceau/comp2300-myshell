@@ -253,7 +253,7 @@ void pipe_me(char *string, int fds[]) {
         eat(last, ' ');
     }
     
-    int pipe_files[3];
+    int pipe_files[2];
     if (pipe(pipe_files) < 0) {
         error(EXIT_FAILURE, errno, "Failed to pipe");
     }
