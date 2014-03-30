@@ -172,12 +172,17 @@ int save_next_arg(int from, char string[], char **save_to) {
     return -1;
 }
 
+/* Checks an input string for input and output specifiers.
+ * e.g. < input, > output, >> append.
+ * If found, it will open a file and save the file number
+ * to fds. fds[0] for input, and fds[1] for output.
+ * Returns -1 if an error was generated and 0 otherwise.
+ */
 int check_io(char string[], int fds[]) {
-    int error = 0;
     for (int i = 0; i < (int)strlen(string); i++) {
         if (i == (int)strlen(string) - 1 && (string[i] == '<' || string[i]  == '>')) {
             fprintf(stderr, "Error: file name expected after %c.\n", string[i]);
-            error = 1;
+            return -1;
             break;
         }
         if (string[i] == '<') {
@@ -192,16 +197,14 @@ int check_io(char string[], int fds[]) {
                 }
                 free(input_file);
             } else {
-                error = 1;
+                return -1;
             }
         }
         if (string[i] == '>') {
             int mode = O_RDWR | O_CREAT;
             if (string[i + 1] == '>') {
-                printf("string: %s\n", string);
                 mode |= O_APPEND;
                 shift_string(i, string, 1);
-                printf("string: %s\n", string);
             } else {
                 mode |= O_TRUNC;
             }
@@ -209,28 +212,36 @@ int check_io(char string[], int fds[]) {
             if (!save_next_arg(i, string, &output_file)) {
                 int offset = (string[i + 1] == ' ') ? 2 : 1;
                 shift_string(i, string, (int)strlen(output_file) + offset);
-                printf("string: %s\n", string);
                 close(fds[1]);
                 if ((fds[1] = open(output_file, mode, 0644)) < 0) {
                     fprintf(stderr, "Error: Couldn't open %s.\n", output_file);
-                    error = 1;
+                    return -1;
                 }
                 free(output_file);
             } else {
-                error = 1;
+                return -1;
             }
         }
     }
     
     eat(string, ' ');
-    return error;
+    return 0;
 }
 
+/* Takes an input string of arguments separated by a pipe
+ * and splits them into arguments.
+ * e.g. if input was "ls -la | wc", then:
+ * cmd_array[0] = "ls -la"
+ * cmd_array[1] = "wc"
+ * It then executes each command in the cmd_array and passes
+ * the input of one into the other.
+ * fds[] is an array of a file descriptors.
+ * fds[0] is the inital input file and fds[1] is the final output.
+ */
 void pipe_me(char *input, int fds[]) {
     eat(input, '|');
     int count = 0;
     char *cmd_array[arg_count(input, '|') + 1];
-    //printf("arg count: %d\n", arg_count(input, '|'));
 
     // process input and push commands into the cmd_array
     int index;
@@ -241,16 +252,15 @@ void pipe_me(char *input, int fds[]) {
         shift_string(0, input, index + 1);                  // push the string backwards :(
         eat(input, ' ');                                    // clean the string
         eat(input, '|');
-        //printf("new input: .%s.\n", input);
     }
 
+    // save the last command manually
     asprintf(&cmd_array[count], "%s", input); 
     eat(cmd_array[count++], ' ');
 
-    int bg = 0;
+    int bg = 0; // flag for if command should be run in background
     char *last = cmd_array[count - 1];
     if (last[(int)strlen(last) - 1] == '&') {
-        // run command in background
         bg = 1;
         shift_string((int)strlen(last) - 1, last, 1);
         eat(last, ' ');
@@ -263,7 +273,6 @@ void pipe_me(char *input, int fds[]) {
         if (pipe(pipe_out) < 0) {
             err(EXIT_FAILURE, "Failed to pipe");
         }
-        printf("Executing: %s\n", cmd_array[i]);
         int arg_size = arg_count(cmd_array[i], ' ');
         char *my_args[arg_size + 1];
         make_arg_vector(cmd_array[i], my_args, arg_size);
@@ -278,7 +287,7 @@ void pipe_me(char *input, int fds[]) {
                     close(pipe_in[1]);
                 }
                 dup2(pipe_in[0], fileno(stdin));
-                close(pipe_in[0]);  // we probably need this
+                close(pipe_in[0]);
                 // final output
                 if (i == count - 1) {
                     dup2(fds[1], fileno(stdout));
@@ -292,21 +301,18 @@ void pipe_me(char *input, int fds[]) {
                     err(EXIT_FAILURE, "%s", *my_args);
                 }
                 break;
-            default:
-                fprintf(stderr, "hello i am the parent.\n");
+            default: // parent process
                 if (pipe_in[1] != -1) {
                     close(pipe_in[1]);
                 }
                 close(pipe_in[0]);
                 pipe_in[0] = pipe_out[0];
                 pipe_in[1] = pipe_out[1];
-                // parent process
                 if (!bg) {
                     wait(NULL);
                 }
                 break;
         }
-        //printf(".%s.\n", cmd_array[i]);
     }
 
 }
@@ -318,6 +324,7 @@ int main(int argc, char *argv[]) {
         asprintf(&prompt, "%s: %s$ ", argv[0], getcwd(NULL, 0));
         input = readline(prompt);
 
+        // quit if EOF or CTRL+D
         if (input == NULL) {
             printf("\n");
             free(prompt);
@@ -347,7 +354,7 @@ int main(int argc, char *argv[]) {
 
             int fds[2] = {dup(fileno(stdin)), dup(fileno(stdout))};
             
-            if (!check_io(input, fds)) {
+            if (check_io(input, fds) != -1) {
                 pipe_me(input, fds);
             }
 
