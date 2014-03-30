@@ -306,6 +306,7 @@ void pipe_me(char *input, int fds[]) {
                 }
                 break;
         }
+        free(cmd_array[i]);
     }
 
 }
