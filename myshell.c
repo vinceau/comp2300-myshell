@@ -11,32 +11,20 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
-/* Shifts all the arguments in an arg_vector to the left starting at index.
+/* Shifts all the characters of the string to the left n times.
  */
-void shift_args(int *arg_size, char *arg_vector[], int index) {
-    for (int i = index; i < *arg_size - 1; i++) {
-        arg_vector[i] = arg_vector[i + 1];
-    }
-    if (index < *arg_size) {
-        arg_vector[--*arg_size] = NULL;
-    }
-}
-
-/* Shifts all the characters of the string to the left by times.
- * Useful for removing leading white space.
- */
-void shift_string(int from, char string[], int times) {
+void shift_string(int from, char string[], int n) {
     int len = (int)strlen(string);
     if (from < len) {
-        for (int i = from; i + times < len; i++) {
-            string[i] = string[i + times];
+        for (int i = from; i + n < len; i++) {
+            string[i] = string[i + n];
         }
-        string[len - times] = 0;
+        string[len - n] = 0;
     }
 }
 
 /* Counts the number of arguments in an argument string,
- * separated by the character split. Ensures correct handling
+ * separated by the split character. Has basic handling
  * of quotes. It counts a block of split characters as one.
  */
 int arg_count(char string[], char split) {
@@ -64,9 +52,11 @@ int arg_count(char string[], char split) {
 /* Removes leading, trailing and duplicates of character c from a string.
  */
 void eat(char string[], char c) {
+    // remove leading characters
     while (string[0] == c) {
         shift_string(0, string, 1);
     }
+    // remove trailing characters
     for (int i = (int) strlen(string) - 1; i > 0; i--) {
         if (string[i] == c) {
             string[i] = 0;
@@ -111,13 +101,6 @@ void fix_home(char **in) {
     *in = newstring;
 }
 
-/* Removes excess spaces and replaces ~ with the users home path.
- */
-void parse_input(char **string) {
-    eat(*string, ' ');
-    fix_home(string);
-}
-
 /* Save current directory to old then changes the current
  * directory to path. If path is empty, it will default back
  * to the users home directory.
@@ -138,7 +121,7 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
     input_string = input;
 
     // split input into an argument vector by space
-    // code based on the bsd man strsep
+    // code based on the bsd man page of strsep
     for (ap = arg_vector; (*ap = strsep(&input_string, " ")) != NULL;) {
         if (**ap != '\0') {
             if (++ap >= &arg_vector[arg_size + 1]) {
@@ -149,8 +132,13 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
     free(input_string);
 }
 
-int next_index(char c, char string[], int after) {
-    for (int i = after; i < (int)strlen(string); i++) {
+/* Given a string, and starting at the index from, this
+ * will find the next occurance of the character c and
+ * return its index.
+ * If not found, it will return -1.
+ */
+int next_index(char c, char string[], int from) {
+    for (int i = from; i < (int)strlen(string); i++) {
         if (c == string[i]) {
             return i;
         }
@@ -158,6 +146,10 @@ int next_index(char c, char string[], int after) {
     return -1;
 }
 
+/* Given a string, and starting at the index from, this finds
+ * the next argument and saves it to the address save_to.
+ * Returns the number of characters saved or -1 if an error occured.
+ */
 int save_next_arg(int from, char string[], char **save_to) {
     char *ptr;
     ptr = string;
@@ -165,10 +157,8 @@ int save_next_arg(int from, char string[], char **save_to) {
         int offset = from + ((string[from + 1] == ' ') ? 2 : 1);
         int index = next_index(' ', string, offset);
         int size = ((index < 0) ? (int)strlen(string) : index) - offset;
-        asprintf(save_to, "%.*s", size, ptr + offset);
-        return 0;
+        return asprintf(save_to, "%.*s", size, ptr + offset);
     }
-    // error occured, nothing saved
     return -1;
 }
 
@@ -187,13 +177,13 @@ int check_io(char string[], int fds[]) {
         }
         if (string[i] == '<') {
             char *input_file;
-            if (!save_next_arg(i, string, &input_file)) {
+            if (save_next_arg(i, string, &input_file) > 0) {
                 int offset = (string[i + 1] == ' ') ? 2 : 1;
                 shift_string(i, string, (int)strlen(input_file) + offset);
                 close(fds[0]);
                 if ((fds[0] = open(input_file, O_RDONLY, 0644)) < 0) {
                     fprintf(stderr, "Error: %s not found.\n", input_file);
-                    error = 1;
+                    return -1;
                 }
                 free(input_file);
             } else {
@@ -209,7 +199,7 @@ int check_io(char string[], int fds[]) {
                 mode |= O_TRUNC;
             }
             char *output_file;
-            if (!save_next_arg(i, string, &output_file)) {
+            if (save_next_arg(i, string, &output_file) > 0) {
                 int offset = (string[i + 1] == ' ') ? 2 : 1;
                 shift_string(i, string, (int)strlen(output_file) + offset);
                 close(fds[1]);
@@ -246,15 +236,18 @@ void pipe_me(char *input, int fds[]) {
     // process input and push commands into the cmd_array
     int index;
     while ((index = index_of(input, '|')) >= 0) {
-        //printf("doing something\n");
-        asprintf(&cmd_array[count], "%.*s", index, input);  // cut a substring of input until the pipe
-        eat(cmd_array[count++], ' ');                       // push it into the cmd array
-        shift_string(0, input, index + 1);                  // push the string backwards :(
-        eat(input, ' ');                                    // clean the string
+        asprintf(&cmd_array[count], "%.*s", index, input); // cut a substring of input until the pipe
+        eat(cmd_array[count], ' '); // clean up any additional spaces
+        if (strlen(cmd_array[count]) > 0) {
+            count++;
+        }
+        shift_string(0, input, index + 1); // push the string backwards
+        // clean the string
+        eat(input, ' ');
         eat(input, '|');
     }
 
-    // save the last command manually
+    // save the final command manually
     asprintf(&cmd_array[count], "%s", input); 
     eat(cmd_array[count++], ' ');
 
@@ -340,7 +333,8 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
-            parse_input(&input);
+            eat(input, ' ');
+            fix_home(&input);
 
             // manually handle change directory
             if (strstr(input, "cd") == input) {
@@ -365,7 +359,6 @@ int main(int argc, char *argv[]) {
         free(prompt);
         free(input);
     }
-
 
     return 0;
 }
