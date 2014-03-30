@@ -1,8 +1,7 @@
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
-#include <error.h>
-#include <errno.h>
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -181,10 +180,10 @@ int check_io(char string[], int fds[]) {
             error = 1;
             break;
         }
-        int offset = (string[i + 1] == ' ') ? 2 : 1;
         if (string[i] == '<') {
             char *input_file;
             if (!save_next_arg(i, string, &input_file)) {
+                int offset = (string[i + 1] == ' ') ? 2 : 1;
                 shift_string(i, string, (int)strlen(input_file) + offset);
                 close(fds[0]);
                 if ((fds[0] = open(input_file, O_RDONLY, 0644)) < 0) {
@@ -199,14 +198,18 @@ int check_io(char string[], int fds[]) {
         if (string[i] == '>') {
             int mode = O_RDWR | O_CREAT;
             if (string[i + 1] == '>') {
+                printf("string: %s\n", string);
                 mode |= O_APPEND;
                 shift_string(i, string, 1);
+                printf("string: %s\n", string);
             } else {
                 mode |= O_TRUNC;
             }
             char *output_file;
             if (!save_next_arg(i, string, &output_file)) {
+                int offset = (string[i + 1] == ' ') ? 2 : 1;
                 shift_string(i, string, (int)strlen(output_file) + offset);
+                printf("string: %s\n", string);
                 close(fds[1]);
                 if ((fds[1] = open(output_file, mode, 0644)) < 0) {
                     fprintf(stderr, "Error: Couldn't open %s.\n", output_file);
@@ -258,8 +261,9 @@ void pipe_me(char *input, int fds[]) {
     
     for (int i = 0; i < count; i++) {
         if (pipe(pipe_out) < 0) {
-            error(EXIT_FAILURE, errno, "Failed to pipe");
+            err(EXIT_FAILURE, "Failed to pipe");
         }
+        printf("Executing: %s\n", cmd_array[i]);
         int arg_size = arg_count(cmd_array[i], ' ');
         char *my_args[arg_size + 1];
         make_arg_vector(cmd_array[i], my_args, arg_size);
@@ -267,7 +271,7 @@ void pipe_me(char *input, int fds[]) {
         switch (fork()) {
             case -1:
                 // error occured when forking
-                error(EXIT_FAILURE, errno, "Failed to fork a child process");
+                err(EXIT_FAILURE, "Failed to fork a child process");
                 break;
             case 0: // child process
                 if (pipe_in[1] != -1) {
@@ -285,7 +289,7 @@ void pipe_me(char *input, int fds[]) {
                 }
                 // successfully forked child process
                 if (execvp(*my_args, my_args) < 0) {
-                    error(EXIT_FAILURE, errno, "%s", *my_args);
+                    err(EXIT_FAILURE, "%s", *my_args);
                 }
                 break;
             default:
@@ -334,7 +338,7 @@ int main(int argc, char *argv[]) {
             // manually handle change directory
             if (strstr(input, "cd") == input) {
                 if (change_dir(&input[2], &old_dir)) {
-                    error(0, errno, "%s", &input[2]);
+                    err(0, "%s", &input[2]);
                 }
                 free(prompt);
                 free(input);
