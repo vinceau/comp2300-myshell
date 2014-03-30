@@ -259,10 +259,10 @@ void pipe_me(char *input, int fds[]) {
         eat(last, ' ');
     }
 
-    int pipe_out[2];
     int pipe_in[2] = {fds[0], -1};
     
     for (int i = 0; i < count; i++) {
+        int pipe_out[2];
         if (pipe(pipe_out) < 0) {
             err(EXIT_FAILURE, "Failed to pipe");
         }
@@ -275,7 +275,7 @@ void pipe_me(char *input, int fds[]) {
                 // error occured when forking
                 err(EXIT_FAILURE, "Failed to fork a child process");
                 break;
-            case 0: // child process
+            case 0: // successfully forked child process
                 if (pipe_in[1] != -1) {
                     close(pipe_in[1]);
                 }
@@ -289,7 +289,6 @@ void pipe_me(char *input, int fds[]) {
                     dup2(pipe_out[1], fileno(stdout));
                     close(pipe_out[1]);
                 }
-                // successfully forked child process
                 if (execvp(*my_args, my_args) < 0) {
                     err(EXIT_FAILURE, "%s", *my_args);
                 }
@@ -299,6 +298,7 @@ void pipe_me(char *input, int fds[]) {
                     close(pipe_in[1]);
                 }
                 close(pipe_in[0]);
+                // save output for next pipe
                 pipe_in[0] = pipe_out[0];
                 pipe_in[1] = pipe_out[1];
                 if (!bg) {
