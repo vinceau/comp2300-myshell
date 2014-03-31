@@ -47,9 +47,13 @@ Will be interpreted as: ```$ ./foo -foo | ./bar -bar```
 
 Inner Workings
 --------------
-Myshell reads in a line using ```readline()``` and calling ```strip()```, removes any unnecessary spaces. It will first check if it's a shell specific command such as ```cd``` and if so handle the command, otherwise parse it to the ```check_io()```. This will check the string for any IO redirecting commands such as ```<``` or ```>``` and if it finds any it will find the next argument that follows it and attempt to open that file. If no errors occur, it will modify the input string, removing the IO command and the following argument and then return a file descriptor of the input and output files. If no IO redirecting commands are found, it will default to stdin and stdout.
+Myshell reads in a line using ```readline()``` and calling ```strip()```, removes any unnecessary spaces before replacing any tilde ```~``` characters with the user's home path. It will then check if it's a shell specific command such as ```cd``` and if so it will handle the command and then return, otherwise it will parse the new input string to the ```check_io()```.
 
-```run_pipe()``` will then look through the input string and split the string into an array of strings by the pipe ```|``` character.
+```check_io()``` then checks the string for any IO redirecting commands such as ```<``` or ```>``` and if it finds any it will find the next argument that follows it and attempt to open that file. If no errors occur, it will modify the input string, removing the IO command and the following argument and then return a file descriptor of the input and output files. If no IO redirecting commands are found, it will default to ```stdin``` and ```stdout```.
+
+```run_pipe()``` will then look through the input string and split it into an array of strings ```cmd_array``` by the pipe ```|``` character. It will then iterate over each of the strings in ```cmd_array``` and turn the strings into an argument vector. Input file descriptors, ```pipe_in```, are created and the input is set to the result of ```check_io()```. A pipe is created and the input is replaced with the input of ```pipe_in```. If it's on the final iteration, that is the last command in ```cmd_array```, it will also set the output to the output of ```check_io()```. ```execvp()``` is then called on the argument vector and its output is saved into ```pipe_in``` for the next command.
+
+When all the commands in ```cmd_array``` are run, it will return and wait for the next input until the ```exit``` command is received.
 
 Testing
 -------
