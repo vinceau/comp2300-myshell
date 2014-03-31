@@ -64,7 +64,7 @@ void strip(char string[], char c) {
 }
 
 /* Given a string, and starting at the index from, this will find the next
- * occurance of the character c and return its index. If not found, it will
+ * occurrence of the character c and return its index. If not found, it will
  * return -1.
  */
 int next_index(char c, char string[], int from) {
@@ -106,7 +106,7 @@ int change_dir(char *path, char **old) {
     return chdir((!strcmp(path, "-")) ? temp : path);
 } 
 
-/* Given an input string, creates a space seperated argument vector and saves
+/* Given an input string, creates a space separated argument vector and saves
  * it to the address arg_vector.
  */
 void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
@@ -127,7 +127,7 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
 
 /* Given a string, and starting at the index from, this finds the next argument
  * and saves it to the address save_to. Returns the number of characters saved
- * or -1 if an error occured.
+ * or -1 if an error occurred.
  */
 int save_next_arg(int from, char string[], char **save_to) {
     if (from < (int)strlen(string)) {
@@ -200,8 +200,8 @@ int check_io(char string[], int fds[]) {
  * cmd_array[0] = "ls -la"
  * cmd_array[1] = "wc"
  * It then executes each command in the cmd_array and passes the input of one
- * into the other. fds[] is an array of a file descriptors. fds[0] is the inital
- * input file and fds[1] is the final output.
+ * into the other. fds[] is an array of a file descriptors. fds[0] is the
+ * initial input file and fds[1] is the final output.
  */
 void run_pipe(char *input, int fds[]) {
     strip(input, '|');
@@ -231,6 +231,7 @@ void run_pipe(char *input, int fds[]) {
     if (last[(int)strlen(last) - 1] == '&') {
         bg = 1;
         last[(int)strlen(last) - 1] = 0;
+        strip(last, ' '); // remove potential spaces
     }
 
     int pipe_in[2] = {fds[0], -1};
@@ -246,7 +247,7 @@ void run_pipe(char *input, int fds[]) {
 
         switch (fork()) {
             case -1:
-                // error occured when forking
+                // error occurred when forking
                 err(EXIT_FAILURE, "Failed to fork a child process");
                 break;
             case 0: // successfully forked child process
