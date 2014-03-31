@@ -1,12 +1,12 @@
 #define _GNU_SOURCE
 
 #include <err.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <readline/history.h>
 #include <readline/readline.h>
 
@@ -24,9 +24,8 @@ void shift_string(int from, char string[], int n) {
     }
 }
 
-/* Counts the number of arguments in an argument string,
- * separated by the split character. It counts a block
- * of split characters as one.
+/* Counts the number of arguments in an argument string, separated by the split
+ * character. It counts a block of split characters as one.
  */
 int arg_count(char string[], char split) {
     int count = 1;
@@ -64,10 +63,9 @@ void strip(char string[], char c) {
     }
 }
 
-/* Given a string, and starting at the index from, this
- * will find the next occurance of the character c and
- * return its index.
- * If not found, it will return -1.
+/* Given a string, and starting at the index from, this will find the next
+ * occurance of the character c and return its index. If not found, it will
+ * return -1.
  */
 int next_index(char c, char string[], int from) {
     for (int i = from; i < (int)strlen(string); i++) {
@@ -90,15 +88,15 @@ void fix_home(char **in) {
     // find the length of the remaining characters
     int rest = (int)strlen(input) - index - 1;
     char *newstring;
-    asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest, input + index + 1);
+    asprintf(&newstring, "%.*s%s%.*s", index, input, getenv("HOME"), rest,\
+            input + index + 1);
     fix_home(&newstring); // replace the rest of the tildes
     free(*in);
     *in = newstring;
 }
 
-/* Save current directory to old then changes the current
- * directory to path. If path is empty, it will default back
- * to the users home directory.
+/* Save current directory to old then changes the current directory to path.
+ * If path is empty, it will default back to the users home directory.
  */
 int change_dir(char *path, char **old) {
     strip(path, ' ');
@@ -108,8 +106,8 @@ int change_dir(char *path, char **old) {
     return chdir((!strcmp(path, "-")) ? temp : path);
 } 
 
-/* Given an input string, creates a space seperated argument vector
- * and saves it to the address arg_vector.
+/* Given an input string, creates a space seperated argument vector and saves
+ * it to the address arg_vector.
  */
 void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
     char **ap, *input_string;
@@ -127,9 +125,9 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
     free(input_string);
 }
 
-/* Given a string, and starting at the index from, this finds
- * the next argument and saves it to the address save_to.
- * Returns the number of characters saved or -1 if an error occured.
+/* Given a string, and starting at the index from, this finds the next argument
+ * and saves it to the address save_to. Returns the number of characters saved
+ * or -1 if an error occured.
  */
 int save_next_arg(int from, char string[], char **save_to) {
     char *ptr;
@@ -145,13 +143,14 @@ int save_next_arg(int from, char string[], char **save_to) {
 
 /* Checks an input string for input and output specifiers.
  * e.g. < input, > output, >> append.
- * If found, it will open a file and save the file number
- * to fds. fds[0] for input, and fds[1] for output.
- * Returns -1 if an error was generated and 0 otherwise.
+ * If found, it will open a file and save the file number to fds. fds[0] for
+ * input, and fds[1] for output. Returns -1 if an error was generated and 0
+ * otherwise.
  */
 int check_io(char string[], int fds[]) {
     for (int i = 0; i < (int)strlen(string); i++) {
-        if (i == (int)strlen(string) - 1 && (string[i] == '<' || string[i]  == '>')) {
+        if (i == (int)strlen(string) - 1 && (string[i] == '<' ||\
+                    string[i] == '>')) {
             fprintf(stderr, "Error: file name expected after %c.\n", string[i]);
             return -1;
             break;
@@ -199,15 +198,13 @@ int check_io(char string[], int fds[]) {
     return 0;
 }
 
-/* Takes an input string of arguments separated by a pipe
- * and splits them into arguments.
- * e.g. if input was "ls -la | wc", then:
+/* Takes an input string of arguments separated by a pipe and splits them into
+ * arguments. e.g. if input was "ls -la | wc", then:
  * cmd_array[0] = "ls -la"
  * cmd_array[1] = "wc"
- * It then executes each command in the cmd_array and passes
- * the input of one into the other.
- * fds[] is an array of a file descriptors.
- * fds[0] is the inital input file and fds[1] is the final output.
+ * It then executes each command in the cmd_array and passes the input of one
+ * into the other. fds[] is an array of a file descriptors. fds[0] is the inital
+ * input file and fds[1] is the final output.
  */
 void run_pipe(char *input, int fds[]) {
     strip(input, '|');
@@ -217,7 +214,7 @@ void run_pipe(char *input, int fds[]) {
     // process input and push commands into the cmd_array
     int index;
     while ((index = next_index('|', input, 0)) >= 0) {
-        asprintf(&cmd_array[count], "%.*s", index, input); // cut a substring of input until the pipe
+        asprintf(&cmd_array[count], "%.*s", index, input);
         strip(cmd_array[count], ' '); // clean up any additional spaces
         if (strlen(cmd_array[count]) > 0) {
             count++;
