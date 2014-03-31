@@ -130,13 +130,11 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
  * or -1 if an error occured.
  */
 int save_next_arg(int from, char string[], char **save_to) {
-    char *ptr;
-    ptr = string;
     if (from < (int)strlen(string)) {
         int offset = from + ((string[from + 1] == ' ') ? 2 : 1);
         int index = next_index(' ', string, offset);
         int size = ((index < 0) ? (int)strlen(string) : index) - offset;
-        return asprintf(save_to, "%.*s", size, ptr + offset);
+        return asprintf(save_to, "%.*s", size, &string[offset]);
     }
     return -1;
 }
@@ -232,8 +230,7 @@ void run_pipe(char *input, int fds[]) {
     char *last = cmd_array[count - 1];
     if (last[(int)strlen(last) - 1] == '&') {
         bg = 1;
-        shift_string((int)strlen(last) - 1, last, 1);
-        strip(last, ' ');
+        last[(int)strlen(last) - 1] = 0;
     }
 
     int pipe_in[2] = {fds[0], -1};
