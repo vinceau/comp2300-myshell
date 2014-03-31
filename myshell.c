@@ -149,11 +149,10 @@ int save_next_arg(int from, char string[], char **save_to) {
  */
 int check_io(char string[], int fds[]) {
     for (int i = 0; i < (int)strlen(string); i++) {
-        if (i == (int)strlen(string) - 1 && (string[i] == '<' ||\
-                    string[i] == '>')) {
+        if (i == (int)strlen(string) - 1 && \
+                (string[i] == '<' || string[i] == '>')) {
             fprintf(stderr, "Error: file name expected after %c.\n", string[i]);
             return -1;
-            break;
         }
         if (string[i] == '<') {
             char *input_file;
