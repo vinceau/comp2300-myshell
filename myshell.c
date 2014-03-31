@@ -73,6 +73,20 @@ void strip(char string[], char c) {
     }
 }
 
+/* Given a string, and starting at the index from, this
+ * will find the next occurance of the character c and
+ * return its index.
+ * If not found, it will return -1.
+ */
+int next_index(char c, char string[], int from) {
+    for (int i = from; i < (int)strlen(string); i++) {
+        if (c == string[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 /* Replaces all the tildes in a string with the home environmental variable.
  */
 void fix_home(char **in) {
@@ -120,20 +134,6 @@ void make_arg_vector(char *input, char *arg_vector[], int arg_size) {
         }
     }
     free(input_string);
-}
-
-/* Given a string, and starting at the index from, this
- * will find the next occurance of the character c and
- * return its index.
- * If not found, it will return -1.
- */
-int next_index(char c, char string[], int from) {
-    for (int i = from; i < (int)strlen(string); i++) {
-        if (c == string[i]) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 /* Given a string, and starting at the index from, this finds
