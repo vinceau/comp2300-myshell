@@ -34,9 +34,9 @@ Pass your output to other functions as many times as you'd like!
 Pass a file to a function and output the result to a file! Supported
 redirections include:
 
-* < redirect from ```stdin```
-* > redirect from ```stdout```
-* >> append from ```stdout```
+* ```<``` redirect from ```stdin```
+* ```>``` redirect from ```stdout```
+* ```>>``` append from ```stdout```
 
 > ```$ ./foo < input.txt | ./bar -bar | ./foobar > output.txt```
 
