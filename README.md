@@ -40,9 +40,10 @@ redirections include:
 
 > ```$ ./foo < input.txt | ./bar -bar | ./foobar > output.txt```
 
-### Line-editing and Command History (from readline)
+### Line-editing, Tab Completion, and Command History (from readline)
 Made a mistake in your command? Use the up arrow key to see your previously
-inputted commands and then edit them with your arrow keys.
+inputted commands and then edit them with your arrow keys. You can also press
+the tab key to auto-complete filenames.
 
 ### Noob-friendly
 Not sure what you're doing? That's okay! Myshell is very forgiving to the user!
