@@ -25,22 +25,13 @@ void shift_string(int from, char string[], int n) {
 }
 
 /* Counts the number of arguments in an argument string,
- * separated by the split character. Has basic handling
- * of quotes. It counts a block of split characters as one.
+ * separated by the split character. It counts a block
+ * of split characters as one.
  */
 int arg_count(char string[], char split) {
-    int dquote = 0; // flag for waiting double quote
-    int squote = 0; // flag for waiting single quote
     int count = 1;
     for (int i = 0; i < (int)strlen(string); i++) {
-        char c = string[i]; 
-        if (c == '\"') {
-            dquote = (dquote) ? 0 : 1; 
-        }
-        if (c == '\'') {
-            squote = (squote) ? 0 : 1; 
-        }
-        if (c == split && !dquote && !squote) {
+        if (string[i] == split) {
             // don't count repeats
             if (i > 0 && string[i - 1] != split) {
                 count++;
