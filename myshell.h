@@ -1,7 +1,6 @@
 int arg_count(char string[], char split);
 int change_dir(char *path, char **old);
 int check_io(char string[], int fds[]);
-int index_of(char input[], char c);
 int next_index(char c, char string[], int from);
 int save_next_arg(int from, char string[], char **save_to);
 void fix_home(char **in);

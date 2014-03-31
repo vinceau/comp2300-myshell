@@ -73,23 +73,12 @@ void strip(char string[], char c) {
     }
 }
 
-/* Returns the first index of a character in a string.
- * If character can't be found, it returns -1.
- */
-int index_of(char input[], char c) {
-    char* address = strchr(input, c);
-    if (address == NULL) {
-        return -1;
-    }
-    return address - input;
-}
-
 /* Replaces all the tildes in a string with the home environmental variable.
  */
 void fix_home(char **in) {
     char *input = *in;
     // find index of the ~ in the string
-    int index = index_of(input, '~');
+    int index = next_index('~', input, 0);
     if (index < 0) {
         return;
     }
@@ -236,7 +225,7 @@ void run_pipe(char *input, int fds[]) {
 
     // process input and push commands into the cmd_array
     int index;
-    while ((index = index_of(input, '|')) >= 0) {
+    while ((index = next_index('|', input, 0)) >= 0) {
         asprintf(&cmd_array[count], "%.*s", index, input); // cut a substring of input until the pipe
         strip(cmd_array[count], ' '); // clean up any additional spaces
         if (strlen(cmd_array[count]) > 0) {
