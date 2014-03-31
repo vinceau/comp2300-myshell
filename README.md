@@ -34,9 +34,9 @@ Pass your output to other functions as many times as you'd like!
 Pass a file to a function and output the result to a file! Supported
 redirections include:
 
-* < redirect from stdin
-* > redirect from stdout
-* >> append from stdout
+* < redirect from ```stdin```
+* > redirect from ```stdout```
+* >> append from ```stdout```
 
 > ```$ ./foo < input.txt | ./bar -bar | ./foobar > output.txt```
 
@@ -95,18 +95,20 @@ regularly print the strings to ensure they were working correctly.
 In order to test the execution of a program in the background, I needed to run
 programs that wouldn't immediately return control to the user. I used the
 ```eog``` program which would open up an image and only return when the image
-window was closed to test this functionality.
+window was closed to test this run-in-background functionality was working
+correctly.
 
 Limitations
 -----------
 Quoted text isn't supported. Because of this, functions that take a string
 literal misbehave. For example:  
+> ```$ git commit -m "Commit message."```  
 > ```$ echo "hello world"```
 
-This command should have two arguments, the first being ```echo``` and the
+The second command should have two arguments, the first being ```echo``` and the
 other being ```hello world```. So when it prints, it should simply show
 ```hello world``` on screen. However, as quotes are not supported, and the
-commands are seperated by space, this command gets interpretted as three
+commands are separated by space, this command gets interpreted as three
 arguments: ```echo```, ```"hello``` and ```world"```. When this gets executed,
 it prints ```"hello world"```.
 
