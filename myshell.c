@@ -1,4 +1,3 @@
-#define _BSD_SOURCE
 #define _GNU_SOURCE
 
 #include <err.h>
@@ -10,6 +9,8 @@
 #include <fcntl.h>
 #include <readline/history.h>
 #include <readline/readline.h>
+
+#include "myshell.h"
 
 /* Shifts all the characters of the string to the left n times.
  */
@@ -51,7 +52,7 @@ int arg_count(char string[], char split) {
 
 /* Removes leading, trailing and duplicates of character c from a string.
  */
-void eat(char string[], char c) {
+void strip(char string[], char c) {
     // remove leading characters
     while (string[0] == c) {
         shift_string(0, string, 1);
@@ -106,7 +107,7 @@ void fix_home(char **in) {
  * to the users home directory.
  */
 int change_dir(char *path, char **old) {
-    eat(path, ' ');
+    strip(path, ' ');
     path = ((int)strlen(path) > 0) ? path : getenv("HOME"); 
     char *temp = *old;
     *old = getcwd(NULL, 0);
@@ -214,7 +215,7 @@ int check_io(char string[], int fds[]) {
         }
     }
     
-    eat(string, ' ');
+    strip(string, ' ');
     return 0;
 }
 
@@ -228,8 +229,8 @@ int check_io(char string[], int fds[]) {
  * fds[] is an array of a file descriptors.
  * fds[0] is the inital input file and fds[1] is the final output.
  */
-void pipe_me(char *input, int fds[]) {
-    eat(input, '|');
+void run_pipe(char *input, int fds[]) {
+    strip(input, '|');
     int count = 0;
     char *cmd_array[arg_count(input, '|') + 1];
 
@@ -237,26 +238,26 @@ void pipe_me(char *input, int fds[]) {
     int index;
     while ((index = index_of(input, '|')) >= 0) {
         asprintf(&cmd_array[count], "%.*s", index, input); // cut a substring of input until the pipe
-        eat(cmd_array[count], ' '); // clean up any additional spaces
+        strip(cmd_array[count], ' '); // clean up any additional spaces
         if (strlen(cmd_array[count]) > 0) {
             count++;
         }
         shift_string(0, input, index + 1); // push the string backwards
         // clean the string
-        eat(input, ' ');
-        eat(input, '|');
+        strip(input, ' ');
+        strip(input, '|');
     }
 
     // save the final command manually
     asprintf(&cmd_array[count], "%s", input); 
-    eat(cmd_array[count++], ' ');
+    strip(cmd_array[count++], ' ');
 
     int bg = 0; // flag for if command should be run in background
     char *last = cmd_array[count - 1];
     if (last[(int)strlen(last) - 1] == '&') {
         bg = 1;
         shift_string((int)strlen(last) - 1, last, 1);
-        eat(last, ' ');
+        strip(last, ' ');
     }
 
     int pipe_in[2] = {fds[0], -1};
@@ -334,7 +335,7 @@ int main(int argc, char *argv[]) {
             }
 
             add_history(input);
-            eat(input, ' ');
+            strip(input, ' ');
             fix_home(&input);
 
             // manually handle change directory
@@ -350,7 +351,7 @@ int main(int argc, char *argv[]) {
             int fds[2] = {dup(fileno(stdin)), dup(fileno(stdout))};
             
             if (check_io(input, fds) != -1) {
-                pipe_me(input, fds);
+                run_pipe(input, fds);
             }
 
             close(fds[0]);
