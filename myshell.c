@@ -12,11 +12,15 @@
 
 #include "myshell.h"
 
-/* Shifts all the characters of the string to the left n times.
+/* Shifts all the characters of the string to the left n times starting at from.
  */
 void shift_string(int from, char string[], int n) {
     int len = (int)strlen(string);
     if (from < len) {
+        if ((int)strlen(&string[from]) <= n) {
+            string[from] = 0;
+            return;
+        }
         for (int i = from; i + n < len; i++) {
             string[i] = string[i + n];
         }
